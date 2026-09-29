@@ -2,7 +2,7 @@
 
 A Claude-only engineering stack for Claude Code: a rigorous working mode, per-role Sonnet/Opus effort routing, focused skills, and daily-driver hooks.
 
-Built on [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (MIT), rebuilt for Claude-only workflows.
+K-stack is my personal Claude Code stack, and the next version of what used to be Claude Agent System (CAS). I merged the parts of CAS I still use every day (Spectre research, the safety hooks, the Codex and Cursor delegation skills) with my global setup (e2e QA through AgentController, notifications, commit guards). I removed the routers and swarm wrappers that current models no longer need. I also brought in the working mode and playbooks from [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (MIT), and rebuilt them around Claude-only Sonnet and Opus routing.
 
 ## Install
 
