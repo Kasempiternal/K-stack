@@ -1,7 +1,0 @@
-{
-  "name": "cccontrol-mcp",
-  "version": "1.0.0",
-  "description": "CCControl MCP Server — Lightning-fast macOS app control via Accessibility APIs",
-  "main": "index.js",
-  "type": "module"
-}

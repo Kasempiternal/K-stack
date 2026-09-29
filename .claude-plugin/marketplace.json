@@ -1,17 +1,17 @@
 {
-  "name": "claude-agent-system",
+  "name": "k-stack",
   "version": "1.0.0",
-  "description": "Claude Code workflows for deep research, guarded Codex delegation, deliberate Agent Teams, and focused safety hooks",
+  "description": "Claude-only engineering stack: a rigorous mode with AA-informed Sonnet/Opus effort routing, focused skills, and daily-driver hooks.",
   "owner": {
     "name": "Kasempiternal",
     "url": "https://github.com/Kasempiternal"
   },
   "plugins": [
     {
-      "name": "cas",
-      "version": "7.37.0",
-      "description": "Evidence-driven research, guarded Codex delegation, explicit native parallelism, secret protection, and approval gates for rm, commit, and push.",
-      "source": "./claude-agent-system-plugin"
+      "name": "kstack",
+      "version": "1.0.0",
+      "description": "k-mode router + playbooks, per-role Sonnet/Opus effort tiers, k-spectre research, k-review, k-e2e-qa, and safety hooks.",
+      "source": "./kstack"
     }
   ]
 }

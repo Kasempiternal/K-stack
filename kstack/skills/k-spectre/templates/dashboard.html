@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-spectre research report: /* TOPIC_PLACEHOLDER */</title>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: #1a2235;
+    --bg-hover: #1e293b;
+    --border: #2d3a50;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-teal: #14b8a6;
+    --accent-teal-dim: #0d9488;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-yellow: #eab308;
+    --accent-red: #ef4444;
+    --accent-orange: #f97316;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  header {
+    text-align: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent-teal), var(--accent-blue));
+    color: #fff;
+    padding: 0.25rem 1rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--text-primary), var(--accent-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  header .meta {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  header .meta span { margin: 0 0.5rem; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .stat-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-teal);
+  }
+
+  .stat-card .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+  }
+
+  .section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent-teal);
+  }
+
+  .section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .section p { color: var(--text-secondary); margin-bottom: 0.75rem; }
+
+  .finding {
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--accent-teal);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .finding.disputed { border-left-color: var(--accent-orange); }
+  .finding.unverified { border-left-color: var(--text-muted); }
+
+  .finding .title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .finding .body { color: var(--text-secondary); font-size: 0.9rem; }
+
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-strong { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+  .tag-moderate { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+  .tag-weak { background: rgba(234,179,8,0.15); color: var(--accent-yellow); }
+  .tag-confirmed { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+  .tag-disputed { background: rgba(249,115,22,0.15); color: var(--accent-orange); }
+  .tag-unverified { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+
+  .verdict-banner {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .verdict-reliable { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--accent-green); }
+  .verdict-mixed { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); color: var(--accent-yellow); }
+  .verdict-unreliable { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--accent-red); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+  }
+
+  th, td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+  }
+
+  td { color: var(--text-secondary); }
+  td a { color: var(--accent-teal); text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--accent-teal); border-bottom-color: var(--accent-teal); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .recommendation {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .recommendation:last-child { border-bottom: none; }
+
+  .recommendation .number {
+    background: var(--accent-teal);
+    color: var(--bg-primary);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 1rem; }
+    header h1 { font-size: 1.5rem; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">K-spectre research report</div>
+    <h1>/* TOPIC_PLACEHOLDER */</h1>
+    <div class="meta">
+      <span>/* DATE_PLACEHOLDER */</span> |
+      <span>Tier: /* TIER_PLACEHOLDER */</span> |
+      <span>/* RESEARCHER_COUNT_PLACEHOLDER */ Researchers</span> |
+      <span>/* SOURCE_COUNT_PLACEHOLDER */ Sources</span>
+    </div>
+  </header>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="value">/* FINDING_COUNT_PLACEHOLDER */</div>
+      <div class="label">Key Findings</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">/* CONFIRMED_COUNT_PLACEHOLDER */</div>
+      <div class="label">Confirmed</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">/* DISPUTED_COUNT_PLACEHOLDER */</div>
+      <div class="label">Disputed</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">/* SOURCE_COUNT_PLACEHOLDER */</div>
+      <div class="label">Sources</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">/* FACET_COUNT_PLACEHOLDER */</div>
+      <div class="label">Facets</div>
+    </div>
+  </div>
+
+  <div class="verdict-banner /* VERDICT_CLASS_PLACEHOLDER */">
+    Validation Verdict: /* VERDICT_PLACEHOLDER */
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('summary')">Executive Summary</button>
+    <button class="tab" onclick="switchTab('findings')">Key Findings</button>
+    <button class="tab" onclick="switchTab('analysis')">Analysis</button>
+    <button class="tab" onclick="switchTab('contested')">Contested</button>
+    <button class="tab" onclick="switchTab('recommendations')">Recommendations</button>
+    <button class="tab" onclick="switchTab('sources')">Sources</button>
+    <button class="tab" onclick="switchTab('methodology')">Methodology</button>
+  </div>
+
+  <div id="tab-summary" class="tab-content active">
+    <div class="section">
+      <h2>Executive Summary</h2>
+      <p>/* EXECUTIVE_SUMMARY_PLACEHOLDER */</p>
+    </div>
+  </div>
+
+  <div id="tab-findings" class="tab-content">
+    <div class="section">
+      <h2>Key Findings</h2>
+      <!-- FINDINGS_PLACEHOLDER -->
+      <div class="finding">
+        <div class="title">
+          <span class="tag tag-strong">STRONG</span>
+          <span class="tag tag-confirmed">CONFIRMED</span>
+          Finding title here
+        </div>
+        <div class="body">Finding details here with specific data points and source citations.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-analysis" class="tab-content">
+    <div class="section">
+      <h2>Detailed Analysis</h2>
+      <!-- ANALYSIS_PLACEHOLDER -->
+      <p>Analysis content organized by theme.</p>
+    </div>
+  </div>
+
+  <div id="tab-contested" class="tab-content">
+    <div class="section">
+      <h2>Contested Findings</h2>
+      <!-- CONTESTED_PLACEHOLDER -->
+      <p>Findings where evidence is contradictory or disputed.</p>
+    </div>
+  </div>
+
+  <div id="tab-recommendations" class="tab-content">
+    <div class="section">
+      <h2>Recommendations</h2>
+      <!-- RECOMMENDATIONS_PLACEHOLDER -->
+      <div class="recommendation">
+        <div class="number">1</div>
+        <div>
+          <strong>Recommendation title</strong>
+          <p>Recommendation details with justification.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-sources" class="tab-content">
+    <div class="section">
+      <h2>Sources</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Used By</th>
+            <th>Verified</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- SOURCES_TABLE_PLACEHOLDER -->
+          <tr>
+            <td>1</td>
+            <td><a href="#">Source title</a></td>
+            <td>article</td>
+            <td>2026-01</td>
+            <td>researcher-x</td>
+            <td><span class="tag tag-confirmed">YES</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-methodology" class="tab-content">
+    <div class="section">
+      <h2>Methodology</h2>
+      <!-- METHODOLOGY_PLACEHOLDER -->
+      <h3>Research Scope</h3>
+      <p>Details about how the research was conducted.</p>
+
+      <h3>Facets Investigated</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Facet</th><th>Researcher</th><th>Confidence</th><th>Sources</th></tr>
+        </thead>
+        <tbody>
+          <!-- FACETS_TABLE_PLACEHOLDER -->
+        </tbody>
+      </table>
+
+      <h3>Limitations</h3>
+      <p>Honest assessment of research limitations.</p>
+    </div>
+  </div>
+
+  <footer>
+    Generated by k-spectre, /* DATE_PLACEHOLDER */
+  </footer>
+
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+</script>
+</body>
+</html>

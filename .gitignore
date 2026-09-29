@@ -42,12 +42,6 @@ build/
 *.egg-info/
 .eggs/
 
-# Spectra MCP server — dist must be tracked for plugin to work
-!spectra-mcp-server/dist/
-
-# CCControl bridge binary — compiled from source on first use
-cccontrol-bridge
-
 # Node.js
 node_modules/
 npm-debug.log*
@@ -89,6 +83,9 @@ NOTES.md
 scratch/
 temp/
 wip/
+
+# K-stack run state
+.kstack/
 
 # Private or Sensitive
 private/

@@ -1,0 +1,14 @@
+{
+  "name": "kstack",
+  "displayName": "K-stack",
+  "version": "1.0.0",
+  "description": "k-mode router + playbooks, per-role Sonnet/Opus effort tiers, k-spectre research, k-review, k-e2e-qa, and safety hooks.",
+  "author": {
+    "name": "Kasempiternal",
+    "url": "https://github.com/Kasempiternal"
+  },
+  "homepage": "https://github.com/Kasempiternal/K-stack",
+  "repository": "https://github.com/Kasempiternal/K-stack",
+  "license": "MIT",
+  "keywords": ["engineering", "routing", "agents", "hooks", "research", "review"]
+}
