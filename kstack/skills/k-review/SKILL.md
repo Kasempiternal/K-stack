@@ -31,7 +31,7 @@ Each reviewer gets the intent, the diff, the file pointers, and its lens. It mus
 
 - **Correctness and regressions.** Logic errors, broken callers, changed contracts, error paths, partial failure, races, off-by-one, state that can become invalid.
 - **Simplification.** Dead code, one-caller wrappers, duplicated shape assumptions, indirection that adds no value, a missing structure (state machine, registry) that would delete branches. Anything that raises reader load.
-- **Security and data.** Input validation at boundaries, injection, authz, secrets in code or logs, destructive operations, migrations, data loss on retry.
+- **Security and data.** Input validation at boundaries, injection, authz, secrets in code or logs, destructive operations, migrations, data loss on retry. This reviewer ends its report with `model: <exact model ID>`, because Opus 5.5 silently falls back to Opus 4.8 on most cybersecurity work (see `k-mode/references/routing.md`, Security fallback).
 - **Tests and verification.** Do the tests assert behavior with literal expected values? Would they pass with the implementation stubbed out? Is the claimed verification on the right surface? Missing edge cases.
 
 ## 5. Judge
@@ -53,6 +53,6 @@ Send all **act on** items in one brief to a `build` worker, or `build-hard` when
 ## Output
 
 - **Intent.** The paragraph from step 2.
-- **Panel.** Each lens with its tier and finding count.
+- **Panel.** Each lens with its tier and finding count. For the security lens, the model ID it reported, flagged when it is not Opus 5.5.
 - **Act on / Consider / Noted / Dismissed.** Each finding with its lenses and a one-line rationale.
 - **Fixed.** What the fix batch changed, with verification output.

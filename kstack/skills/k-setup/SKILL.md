@@ -10,7 +10,7 @@ Write the `kstack-routing` block in `~/.claude/CLAUDE.md`. `k-mode` and every `k
 
 ## 1. Check the tier agents
 
-List the agent types available in this session. Confirm all nine `kstack:k-*` tiers from `../k-mode/references/routing.md` are present. If any are missing, stop. Tell the user to run `/plugin install kstack@k-stack` and start a new session.
+List the agent types available in this session. Confirm all eight `kstack:k-*` tiers from `../k-mode/references/routing.md` are present. If any are missing, stop. Tell the user to run `/plugin install kstack@k-stack` and start a new session. There is no Sonnet Max tier; it is forbidden. If a stale `kstack:k-sonnet-max` still appears, tell the user to run `/plugin update kstack` and never dispatch it.
 
 Then check what the aliases resolve to. Dispatch `kstack:k-sonnet-low` and `kstack:k-opus-medium` in one message, each with the prompt `Reply with only your exact model ID.` Report both. If Sonnet is not 5.5, say that the routing still works but its benchmark basis was Sonnet 5.5, and that `claude update` plus account access moves it there automatically.
 
@@ -24,12 +24,12 @@ Legacy config from the pstack port: `~/.claude/pstack-models.md` and `~/.claude/
 
 Ask with AskUserQuestion. Name the current preset when one is recorded.
 
-- `Balanced (recommended)`: Sonnet High for everyday code, Sonnet XHigh for hard code and exploration, Opus High for design and review, Opus XHigh for sweeps.
+- `Balanced (recommended)`: Sonnet High for everyday code, Sonnet XHigh for hard code, Opus Medium for exploration, Opus High for design and review, Opus XHigh for sweeps.
 - `Lean`: every role one effort step lower.
 - `Quality`: every role one step higher, capped at XHigh.
 - `Custom`: start from Balanced and change individual roles.
 
-Build the table from the matching column in `routing.md`. For Custom, show every role with its tier. Offer the nine tiers and `inherit` (the role runs on the lead's model, and `model` is omitted on the Agent call). Max tiers are never offered, since Burn reaches them per task.
+Build the table from the matching column in `routing.md`. For Custom, show every role with its tier. Offer the eight tiers and `inherit` (the role runs on the lead's model, and `model` is omitted on the Agent call). Max tiers are never offered, since Burn reaches them per task.
 
 ## 4. Confirm
 
@@ -48,7 +48,7 @@ mechanical: sonnet-low
 docs: sonnet-medium
 build: sonnet-high
 build-hard: sonnet-xhigh
-explore: sonnet-xhigh
+explore: opus-medium
 research: sonnet-high
 design: opus-high
 review: opus-high
