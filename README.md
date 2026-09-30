@@ -19,7 +19,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 
 - **The lead is Opus 5.5 at High.** It plans, briefs, reviews diffs, and talks to you. It edits directly only for one-or-two-turn changes.
 - **Work routes by role, never by model name.** A playbook step names a role (`build`, `explore`, `review`, ...), and the role resolves to a tier agent: one `kstack:k-*` agent per model/effort pair, since the Agent tool cannot carry effort.
-- **Burn** is a deliberate spend-more switch. Say "burn" or name a Max tier and the current task escalates to Sonnet Max or Opus Max. It never turns on by itself.
+- **Burn** is a deliberate spend-more switch. Say "burn" or name a Max tier and the current task escalates to Opus Max. It never turns on by itself. Sonnet Max is forbidden and has no tier.
 - **The loop is design → build → review → fix.** Nontrivial changes go through k-design first, every worker diff goes through k-review before landing, and verification happens on the real surface (k-e2e-qa for UI and devices).
 - **Nothing is done without evidence.** Workers paste the command and its outcome; unverifiable claims get labeled, not laundered.
 
@@ -46,7 +46,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 | `docs` | README, developer docs, docstrings, API docs | sonnet-medium |
 | `build` | normal features and UI, simple bugs, tests | sonnet-high |
 | `build-hard` | large features, complex state, refactors, hard bugs | sonnet-xhigh |
-| `explore` | unfamiliar code, repo-wide search, regression archaeology | sonnet-xhigh |
+| `explore` | unfamiliar code, repo-wide search, regression archaeology | opus-medium |
 | `research` | web and document research seats (k-spectre) | sonnet-high |
 | `design` | architecture, API design, plans, RFCs | opus-high |
 | `review` | diff review, simplification, security, claim validation | opus-high |
@@ -54,7 +54,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 
 Max never appears in a preset; Burn reaches it per task. The full table with Lean and Quality presets lives in `kstack/skills/k-mode/references/routing.md`.
 
-The routing shape follows Artificial Analysis measurements quoted 2026-09-29: Sonnet 5.5 High→XHigh is the useful coding step (Coding Agent Index 55→63), XHigh→Max gains little at ~4x cost, and Opus 5.5 High beats Sonnet XHigh on intelligence per dollar, so judgment roles go to Opus and code volume goes to Sonnet.
+The routing shape follows Artificial Analysis measurements quoted 2026-09-29: Sonnet 5.5 High→XHigh is the useful coding step (Coding Agent Index 55→63), XHigh→Max gains little at ~4x cost, and Opus 5.5 High beats Sonnet XHigh on intelligence per dollar, so judgment roles (now including exploration) go to Opus and code volume goes to Sonnet. Anthropic's launch pages agree: Sonnet leads Terminal-Bench 4.0 (70.6 vs 66.4) at half the price, Opus leads the hardest code (FrontierCode 54.4 vs Sonnet-at-Max 46.2), so Burn goes to Opus Max. Security-lens reviewers report their model ID because Opus 5.5 silently falls back to Opus 4.8 on most cybersecurity work.
 
 ## Hooks
 
