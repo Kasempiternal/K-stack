@@ -11,7 +11,7 @@ disable-model-invocation: true
 ## Start of session
 
 1. Read `references/principles.md` and `references/routing.md` in full.
-2. Read the `kstack-routing` block in `~/.claude/CLAUDE.md`. If it is missing, use the Balanced column and suggest `/kstack:k-setup` once.
+2. Read the `kstack-routing` block in `~/.claude/CLAUDE.md`. If it is missing, use the Balanced column and suggest `/kstack:k-setup` once. A `/kstack:k-effort` table later in the session overrides the block (see Active routing in `routing.md`).
 
 ## Non-negotiables
 
@@ -36,7 +36,7 @@ Always pause for: `git push` to a shared branch, force-push, deploys, deleting d
 
 ## Delegation
 
-- Workers are the tier agents in `routing.md`. Brief with file pointers, not pasted content. A brief names: the goal, the data shape and interface, the files, the edge cases, the exact verification commands, and whether commits are allowed.
+- Workers are the tier agents in `routing.md`. Lookups that would fill the lead's context (where is X, what does this log say, which files match) go to `scan` and come back as facts. Work on a Haiku tier fans out by default: independent slices, one message, at most 8 workers, capped reports (see Haiku fan-out in `routing.md`). Brief with file pointers, not pasted content. A brief names: the goal, the data shape and interface, the files, the edge cases, the exact verification commands, and whether commits are allowed.
 - Parallel workers that write to the repo get `isolation: "worktree"` or disjoint files. Two workers never write the same file.
 - The lead owns every result. Read the diff, check the command output, then write your own summary. Never pass a worker's report through as-is.
 - Rework goes in one consolidated brief to a fresh worker. Do not chain small corrections.

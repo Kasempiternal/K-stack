@@ -17,6 +17,8 @@ State your reading of the question in one line and proceed. The user redirects i
 
 ## 2. Fan out
 
+When the territory is unmapped, first send a `scan` fan-out (see Haiku fan-out in `../k-mode/references/routing.md`) to locate entry points, key types, and the files each slice will need. The `explore` workers then start from those pointers instead of searching on their own.
+
 Split the question into two to four disjoint slices. Example: data model and state, request path, configuration and side effects. Dispatch all slices in one message, one `explore` worker per slice. Each brief says:
 
 - The slice, and the question it serves.
