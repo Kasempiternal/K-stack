@@ -1,5 +1,5 @@
 {
-  "description": "K-stack daily-driver hooks: session/attention/stop notifications, secret protection, and approval gates for sensitive commands, AI-attributed commits, and app relaunches",
+  "description": "K-stack daily-driver hooks: session/attention/stop notifications, k-effort routing restore after compaction, secret protection, and approval gates for sensitive commands, AI-attributed commits, and app relaunches",
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +7,16 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify-session-start.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "compact|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/k-effort/scripts/k-effort.js\" hook",
+            "timeout": 5
           }
         ]
       }
