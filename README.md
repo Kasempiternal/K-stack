@@ -1,6 +1,6 @@
 # K-stack
 
-A Claude-only engineering stack for Claude Code: a rigorous working mode, per-role Sonnet/Opus effort routing, focused skills, and daily-driver hooks.
+A Claude-only engineering stack for Claude Code: a rigorous working mode, per-role Haiku/Sonnet/Opus effort routing, focused skills, and daily-driver hooks.
 
 K-stack is my personal Claude Code stack, and the next version of what used to be Claude Agent System (CAS). I merged the parts of CAS I still use every day (Spectre research, the safety hooks, the Codex and Cursor delegation skills) with my global setup (e2e QA through AgentController, notifications, commit guards). I removed the routers and swarm wrappers that current models no longer need. I also brought in the working mode and playbooks from [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (MIT), and rebuilt them around Claude-only Sonnet and Opus routing.
 
@@ -19,7 +19,9 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 
 - **The lead is Opus 5.5 at High.** It plans, briefs, reviews diffs, and talks to you. It edits directly only for one-or-two-turn changes.
 - **Work routes by role, never by model name.** A playbook step names a role (`build`, `explore`, `review`, ...), and the role resolves to a tier agent: one `kstack:k-*` agent per model/effort pair, since the Agent tool cannot carry effort.
-- **Burn** is a deliberate spend-more switch. Say "burn" or name a Max tier and the current task escalates to Opus Max. It never turns on by itself. Sonnet Max is forbidden and has no tier.
+- **`/kstack:k-effort` switches the routing level** the way `/effort` switches the session's: `lean < balanced < quality`, saved as the default, or `session` for this session only.
+- **Burn** is a deliberate spend-more switch. Say "burn" or name a Max tier and the current task escalates to Opus Max; `/kstack:k-effort burn` holds it for the session. It never turns on by itself. Sonnet Max is forbidden and has no tier.
+- **Haiku work fans out by default.** Independent slices go out in one message, at most 8 workers per wave, each returning a capped list of facts. Cheap tokens make splitting the default; the lead's context and file ownership set the limits.
 - **The loop is design → build → review → fix.** Nontrivial changes go through k-design first, every worker diff goes through k-review before landing, and verification happens on the real surface (k-e2e-qa for UI and devices).
 - **Nothing is done without evidence.** Workers paste the command and its outcome; unverifiable claims get labeled, not laundered.
 
@@ -29,6 +31,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 |---|---|
 | `/kstack:k-mode` | The mode: playbooks, role routing, evidence discipline |
 | `/kstack:k-setup` | Writes the role→tier routing block into `~/.claude/CLAUDE.md` |
+| `/kstack:k-effort` | Switches the routing level (`lean`, `balanced`, `quality`, `up`, `down`, `burn`), like `/effort` |
 | `/kstack:k-explore` | Read-only subsystem explanations and git-history archaeology |
 | `/kstack:k-design` | Design before code: data shape, interface, file plan, failure cases |
 | `/kstack:k-review` | Diff review on separate Opus lenses, judged by the lead |
@@ -42,7 +45,8 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 
 | Role | Covers | Tier |
 |---|---|---|
-| `mechanical` | renames, formatting, boilerplate, small CSS, changelogs | sonnet-low |
+| `scan` | lookups that return facts: find files and symbols, summarize logs and CI output, triage lists | haiku-high |
+| `mechanical` | renames, formatting, boilerplate, small CSS, changelogs | haiku-xhigh |
 | `docs` | README, developer docs, docstrings, API docs | sonnet-medium |
 | `build` | normal features and UI, simple bugs, tests | sonnet-high |
 | `build-hard` | large features, complex state, refactors, hard bugs | sonnet-xhigh |
@@ -56,6 +60,8 @@ Max never appears in a preset; Burn reaches it per task. The full table with Lea
 
 The routing shape follows Artificial Analysis measurements quoted 2026-09-29: Sonnet 5.5 High→XHigh is the useful coding step (Coding Agent Index 55→63), XHigh→Max gains little at ~4x cost, and Opus 5.5 High beats Sonnet XHigh on intelligence per dollar, so judgment roles (now including exploration) go to Opus and code volume goes to Sonnet. Anthropic's launch pages agree: Sonnet leads Terminal-Bench 4.0 (70.6 vs 66.4) at half the price, Opus leads the hardest code (FrontierCode 54.4 vs Sonnet-at-Max 46.2), so Burn goes to Opus Max. Security-lens reviewers report their model ID because Opus 5.5 silently falls back to Opus 4.8 on most cybersecurity work.
 
+Haiku 5.5 (2026-10-07) costs 20x less than Sonnet per token and scores 38 to 41 on the Intelligence Index at High and XHigh, but trails far behind on agentic coding (Terminal-Bench 4.0: 39.2 vs 70.6). So it takes lookups and mechanical edits under an Opus lead, never feature code or research claims. There is no Haiku Max tier: AA measured a 415s time to first token at Max for 2 more points than XHigh. `haiku` is Haiku 5.5 only on the Anthropic API; on Bedrock, Google Cloud and Foundry, k-setup writes `# haiku: off` and those roles run on Sonnet Low.
+
 ## Hooks
 
 | Hook | Event | What it does |
@@ -65,6 +71,7 @@ The routing shape follows Artificial Analysis measurements quoted 2026-09-29: So
 | `no-claude-attribution.js` | PreToolUse `Bash` | Denies `git commit` commands containing `Co-Authored-By` lines |
 | `kill-before-open.js` | PreToolUse `Bash` | macOS only. When a command opens a `.app`, kills the running instance first so you never test a stale build |
 | `notify-session-start.sh` | SessionStart | Records the terminal tab and project so the notifiers below can route |
+| `k-effort.js hook` | SessionStart `compact\|resume` | Re-injects the session's `/kstack:k-effort` routing after a compaction or resume |
 | `notify-attention.sh` | Notification | macOS only. Posts a notification on permission and idle prompts |
 | `notify-stop.sh` | Stop | macOS only. Posts a notification when a task finishes |
 

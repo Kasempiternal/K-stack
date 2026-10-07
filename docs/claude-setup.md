@@ -8,7 +8,9 @@ Run the main session on Opus 5.5 at High effort (`/model opus`, effort `high`). 
 
 ## Routing block
 
-`/kstack:k-setup` writes a managed block into `~/.claude/CLAUDE.md` between `<!-- kstack-routing: begin -->` and `<!-- kstack-routing: end -->`. k-mode reads it at session start; without it, the Balanced preset applies. Edit the routing by re-running `/kstack:k-setup`, not by hand-editing inside the markers.
+`/kstack:k-setup` writes a managed block into `~/.claude/CLAUDE.md` between `<!-- kstack-routing: begin -->` and `<!-- kstack-routing: end -->`. k-mode reads it at session start; without it, the Balanced preset applies. Switch levels with `/kstack:k-effort <lean|balanced|quality>` (saved) or `/kstack:k-effort <level> session` (this session only). Edit individual roles by re-running `/kstack:k-setup`, not by hand-editing inside the markers.
+
+Haiku tiers need Claude Code v2.1.293 or later, and `haiku` resolves to Haiku 5.5 only on the Anthropic API. On Bedrock, Google Cloud or Foundry, k-setup writes `# haiku: off` and those roles run on Sonnet Low.
 
 ## Hooks
 
