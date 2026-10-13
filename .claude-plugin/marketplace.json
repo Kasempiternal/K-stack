@@ -1,6 +1,6 @@
 {
   "name": "k-stack",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Claude-only engineering stack: a rigorous mode with AA-informed Haiku/Sonnet/Opus effort routing, focused skills, and daily-driver hooks.",
   "owner": {
     "name": "Kasempiternal",
@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "kstack",
-      "version": "1.2.0",
-      "description": "k-mode router + playbooks, per-role Haiku/Sonnet/Opus effort tiers, k-effort level switch, k-spectre research, k-review, k-e2e-qa, and safety hooks.",
+      "version": "1.3.0",
+      "description": "k-mode router + playbooks, per-role Haiku/Sonnet/Opus effort tiers, k-effort level switch, k-tokens audit and token settings, k-spectre research, k-review, k-e2e-qa, and safety hooks.",
       "source": "./kstack"
     }
   ]
