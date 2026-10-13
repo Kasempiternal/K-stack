@@ -12,6 +12,19 @@ Run the main session on Opus 5.5 at High effort (`/model opus`, effort `high`). 
 
 Haiku tiers need Claude Code v2.1.293 or later, and `haiku` resolves to Haiku 5.5 only on the Anthropic API. On Bedrock, Google Cloud or Foundry, k-setup writes `# haiku: off` and those roles run on Sonnet Low.
 
+## Token efficiency
+
+`/kstack:k-tokens audit` reads your local transcripts (`~/.claude/projects`) and reports usage per model, main session against agents, idle cache rewrites, context size, compactions and polling. Nothing leaves the machine. Costs use an editable price table and are only relative weights, since plan usage meters are not proportional to list price.
+
+`/kstack:k-tokens apply` asks four questions and merges only those keys into `~/.claude/settings.json`, after a backup:
+
+- `subagentPromptCacheTtl: "1h"`, so agents that wait on long builds keep their cache. The default is 5 minutes, and an idle agent rewrites its whole context after that.
+- `autoCompactWindow: 250000`, so a long job compacts about once.
+- `env.CLAUDE_CODE_SUBAGENT_MODEL: "sonnet"`, so an agent started without a model does not inherit Opus.
+- `modelSettings.<model-id>.effortLevel: "high"` for Sonnet and Opus.
+
+It can also write a managed `kstack-tokens` block into `~/.claude/CLAUDE.md` with agent working rules: fewer, bigger tool calls, quiet blocking waits instead of polls, a current `HANDOVER.md`, one agent per job. `/kstack:k-tokens status` shows the current values next to the recommended ones. `/kstack:k-setup` offers the apply screen as an optional last step.
+
 ## Hooks
 
 The plugin ships `hooks/hooks.json`; no user-level hook config is needed. The macOS-only hooks (notifications, kill-before-open) no-op silently on other platforms.

@@ -32,6 +32,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 | `/kstack:k-mode` | The mode: playbooks, role routing, evidence discipline |
 | `/kstack:k-setup` | Writes the role→tier routing block into `~/.claude/CLAUDE.md` |
 | `/kstack:k-effort` | Switches the routing level (`lean`, `balanced`, `quality`, `up`, `down`, `burn`), like `/effort` |
+| `/kstack:k-tokens` | Audits local transcripts for token waste and applies a few cache, compaction, subagent-model and effort settings |
 | `/kstack:k-explore` | Read-only subsystem explanations and git-history archaeology |
 | `/kstack:k-design` | Design before code: data shape, interface, file plan, failure cases |
 | `/kstack:k-review` | Diff review on separate Opus lenses, judged by the lead |
