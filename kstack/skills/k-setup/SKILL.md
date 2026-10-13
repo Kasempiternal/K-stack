@@ -51,6 +51,10 @@ Re-read the file and confirm the block appears exactly once.
 
 If step 2 found legacy files, list them. Ask once whether to move them to `~/.claude/backups/pstack-legacy-<date>/`. Only move on yes. Never delete them.
 
-## 7. Report
+## 7. Token use (optional)
 
-Say the block was written and which preset is active. It is also active in this session from now on, and other sessions pick it up when they restart. Mention `/kstack:k-effort` for switching levels later. Recommend Opus 5.5 at High as the lead model (`/model opus`, effort high) if the session is on something else.
+Ask once with AskUserQuestion: `Optimise token use too?` with `Yes (Recommended)` and `Skip`. On yes, run the `/kstack:k-tokens apply` screen from `../k-tokens/SKILL.md`. On skip, say that `/kstack:k-tokens audit` shows where tokens go whenever they want it.
+
+## 8. Report
+
+Say the block was written and which preset is active. It is also active in this session from now on, and other sessions pick it up when they restart. Mention `/kstack:k-effort` for switching levels later, and `/kstack:k-tokens` if token settings were applied or skipped. Recommend Opus 5.5 at High as the lead model (`/model opus`, effort high) if the session is on something else.
