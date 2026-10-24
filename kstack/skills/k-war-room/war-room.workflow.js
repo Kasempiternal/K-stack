@@ -58,14 +58,15 @@ function relayWrap(p, prompt, tag) {
   return `You are a relay agent. The panelist "${p.name}" is played by a DIFFERENT model (${p.badge || 'external model'}) through its CLI. Get that model's message and return it.
 
 Steps:
-1. In ONE Bash call (timeout ${tag === 'open' ? 600000 : 420000} ms), create a fresh private prompt file with mktemp, write the persona prompt below into it verbatim with a quoted heredoc (nothing expanded), and run the CLI on it. Use exactly this shape, pasting the persona prompt between the heredoc lines:
-   umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}' && F=$(mktemp '${dir}/${p.key}-${tag}-XXXXXX') && cat > "$F" <<'WAR_ROOM_PROMPT_END'
-   <persona prompt, verbatim>
-   WAR_ROOM_PROMPT_END
-   ${cmd}
-2. If the output ends with a "maximum conversation turns" warning and holds no final message, run the CLI once more on the same file (same Bash call shape, reusing F) with: ${retry}
-3. Return ONLY that model's final message, verbatim. Strip CLI banners, tool logs and progress lines, but do not edit its words.
-4. If the CLI still fails or returns nothing usable, write the message yourself in ${p.name}'s persona and begin it with "[relay: ${p.badge || 'external model'} unavailable, played by Claude]".
+1. Run in Bash: umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}' && mktemp -d '${dir}/${p.key}-${tag}-XXXXXX'
+   It prints a new private directory, P below.
+2. With the Write tool (never the shell, never a heredoc), create P/prompt.txt holding the persona prompt below, verbatim.
+3. Run in Bash with a timeout of ${tag === 'open' ? 600000 : 420000} ms, writing P out in full:
+   F='P/prompt.txt' && ${cmd}
+   If the output ends with a "maximum conversation turns" warning and holds no final message, run once more:
+   F='P/prompt.txt' && ${retry}
+4. Return ONLY that model's final message, verbatim. Strip CLI banners, tool logs and progress lines, but do not edit its words.
+5. If the CLI still fails or returns nothing usable, write the message yourself in ${p.name}'s persona and begin it with "[relay: ${p.badge || 'external model'} unavailable, played by Claude]".
 
 Do not edit any other files.
 

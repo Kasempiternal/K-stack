@@ -154,7 +154,14 @@ def _state():
             turn = re.search(r"#(\d+)$", label)
             slot = f"{ev.get('phase', '')}#{turn.group(1)}" if turn else label
             if slot in slots and slots[slot] != key:
-                order[order.index(slots[slot])] = key
+                i = order.index(slots[slot])
+                order[i] = key
+                if ev.get("phase") != "Openings":
+                    # Later turns of the superseded attempt are stale: they re-run after this one.
+                    for stale in order[i + 1:]:
+                        if started[stale].get("phase") != "Openings":
+                            slots = {k: v for k, v in slots.items() if v != stale}
+                    order = order[:i + 1] + [k for k in order[i + 1:] if started[k].get("phase") == "Openings"]
             elif key not in started:
                 order.append(key)
             slots[slot] = key
