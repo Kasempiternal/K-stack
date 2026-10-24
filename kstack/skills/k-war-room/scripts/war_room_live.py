@@ -91,7 +91,8 @@ def _describe(tool, inp):
     if tool == "Bash":
         cmd = inp.get("command", "")
         if "cmd -p" in cmd:
-            return "🛰️", "asking DeepSeek V4 Pro (Command Code)…"
+            m = re.search(r"\s-m\s+(\S+)", cmd)
+            return "🛰️", f"asking {m.group(1).split('/')[-1] if m else 'an external model'} (Command Code)…"
         if "okc leaderboard" in cmd:
             return "🏁", "checking the live leaderboard"
         if cmd.lstrip().startswith("python3"):
