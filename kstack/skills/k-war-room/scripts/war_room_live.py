@@ -134,7 +134,7 @@ def _activity(path):
 
 
 def _state():
-    started, results, order = {}, {}, []
+    started, results, order, slots = {}, {}, [], {}
     try:
         lines = open(JOURNAL, encoding="utf-8").read().splitlines()
     except OSError:
@@ -148,8 +148,16 @@ def _state():
         if not key:
             continue
         if ev.get("type") == "started":
-            if key not in started:
+            # A resumed run re-runs calls under new keys: the latest attempt of a slot wins
+            # (chat slots are their turn number, since a resumed turn may go to another speaker).
+            label = ev.get("label") or key
+            turn = re.search(r"#(\d+)$", label)
+            slot = f"{ev.get('phase', '')}#{turn.group(1)}" if turn else label
+            if slot in slots and slots[slot] != key:
+                order[order.index(slots[slot])] = key
+            elif key not in started:
                 order.append(key)
+            slots[slot] = key
             started[key] = ev
         elif ev.get("type") == "result" and ev.get("result") is not None:
             results[key] = ev.get("result")

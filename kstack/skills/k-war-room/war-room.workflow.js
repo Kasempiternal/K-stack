@@ -49,20 +49,23 @@ function withLog(head, task) {
 ${chatLog ? 'CHANNEL SO FAR (newest last):' + chatLog + '\n\n' : ''}${task}`
 }
 
-let relayN = 0
 function relayWrap(p, prompt, tag) {
   if (!p.relay) return prompt
   const dir = `${OUT}/.relay`
-  const file = `${dir}/${p.key}-${tag}-${++relayN}.txt`
-  const cmd = p.relay.replace(/\{PROMPT_FILE\}/g, file).replace(/\{MAX_TURNS\}/g, String(tag === 'open' ? 40 : 8))
+  const turns = tag === 'open' ? 40 : 16
+  const cmd = p.relay.replace(/\{PROMPT_FILE\}/g, '"$F"').replace(/\{MAX_TURNS\}/g, String(turns))
+  const retry = p.relay.replace(/\{PROMPT_FILE\}/g, '"$F"').replace(/\{MAX_TURNS\}/g, String(turns * 2))
   return `You are a relay agent. The panelist "${p.name}" is played by a DIFFERENT model (${p.badge || 'external model'}) through its CLI. Get that model's message and return it.
 
 Steps:
-1. Run: umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}'. Then write the persona prompt below, verbatim, to ${file} with set -o noclobber and a quoted heredoc, so nothing is expanded and no existing file or symlink is overwritten. If that write fails, go to step 4.
-2. Run this command with a Bash timeout of ${tag === 'open' ? 600000 : 300000} ms:
+1. In ONE Bash call (timeout ${tag === 'open' ? 600000 : 420000} ms), create a fresh private prompt file with mktemp, write the persona prompt below into it verbatim with a quoted heredoc (nothing expanded), and run the CLI on it. Use exactly this shape, pasting the persona prompt between the heredoc lines:
+   umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}' && F=$(mktemp '${dir}/${p.key}-${tag}-XXXXXX') && cat > "$F" <<'WAR_ROOM_PROMPT_END'
+   <persona prompt, verbatim>
+   WAR_ROOM_PROMPT_END
    ${cmd}
+2. If the output ends with a "maximum conversation turns" warning and holds no final message, run the CLI once more on the same file (same Bash call shape, reusing F) with: ${retry}
 3. Return ONLY that model's final message, verbatim. Strip CLI banners, tool logs and progress lines, but do not edit its words.
-4. If the command fails or returns nothing usable, write the message yourself in ${p.name}'s persona and begin it with "[relay: ${p.badge || 'external model'} unavailable, played by Claude]".
+4. If the CLI still fails or returns nothing usable, write the message yourself in ${p.name}'s persona and begin it with "[relay: ${p.badge || 'external model'} unavailable, played by Claude]".
 
 Do not edit any other files.
 
