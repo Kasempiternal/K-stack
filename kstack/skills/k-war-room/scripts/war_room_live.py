@@ -1,7 +1,7 @@
 """Live chat view of a war-room workflow run: serves a page that polls the run's journal.
 
 usage: python3 war_room_live.py <workflow_transcript_dir> <panel.json> [port]
-panel.json: {"topic", "channel", "outDir", "root", "moderator": {...}, "personas": [{"name", "role", "color", "model", "external"}]}
+panel.json: {"topic", "channel", "outDir", "moderator": {...}, "personas": [{"name", "role", "color", "model", "external"}]}
 Reads each running agent's transcript for live activity (files read, commands run).
 """
 
@@ -19,7 +19,7 @@ RUN_DIR = sys.argv[1]
 PANEL = json.load(open(sys.argv[2], encoding="utf-8"))
 JOURNAL = os.path.join(RUN_DIR, "journal.jsonl")
 # The page reloads itself when this changes, so UI edits reach an open tab.
-UI_VERSION = "w1"
+UI_VERSION = "w2"
 STAGES = [("Openings", "Openings"), ("Live chat", "Live chat"), ("Votes", "Votes"), ("Verdict", "Verdict")]
 def _color(value, default):
     """Only #rgb / #rrggbb(aa) colours reach the page: panel.json is interpolated into HTML."""
@@ -194,7 +194,15 @@ def _state():
     current = phases[-1] if phases else ""
     done = current == "Verdict" and not typing and any(m["phase"] == "Verdict" for m in msgs)
     stages = [{"key": k, "label": v} for k, v in STAGES if k != "Openings" or PANEL.get("openings", True)]
+    verdict = None
+    if done:
+        try:
+            with open(os.path.join(PANEL.get("outDir", ""), "verdict.md"), encoding="utf-8") as f:
+                verdict = f.read(200_000)
+        except OSError:
+            pass
     return {"ui": UI_VERSION, "messages": msgs, "typing": typing, "stage": current, "done": done, "stages": stages,
+            "verdict": verdict,
             "personas": [{k: p[k] for k in ("name", "initials", "role", "color", "model", "external", "mod")} for p in PEOPLE]}
 
 
@@ -249,6 +257,9 @@ main{grid-area:main;overflow:auto;position:relative}
 .bubble{background:var(--panel);border-radius:4px 14px 14px 14px;padding:8px 14px;box-shadow:var(--shadow);border:1px solid var(--line);display:inline-block;max-width:100%}
 .msg:not(.first) .bubble{border-radius:14px}
 .msg.mod .bubble{border:1.5px solid var(--brand)}
+.verdict{margin:22px 0 30px;background:var(--panel);border:1.5px solid var(--brand);border-radius:14px;padding:14px 20px;box-shadow:var(--shadow);overflow-x:auto}
+.verdict .vh{font-weight:700;font-size:15px;margin-bottom:6px}.verdict table{border-collapse:collapse}.verdict td,.verdict th{border:1px solid var(--line);padding:3px 8px}
+.fb{color:#b45309;font-weight:600}
 .bubble h1,.bubble h2,.bubble h3,.bubble h4{font-size:15px;margin:10px 0 4px}
 .bubble p{margin:4px 0}.bubble ul,.bubble ol{margin:4px 0;padding-left:22px}
 .bubble pre{background:var(--code);padding:9px 11px;border-radius:8px;overflow:auto;font-size:12.5px}
@@ -339,11 +350,11 @@ async function drain(){if(busy)return;busy=true;
   busy=false;if(sticky)main.scrollTop=main.scrollHeight}
 function roster(){
   const counts={},acts={},writing=new Set(state.typing.map(t=>t.name));
-  state.messages.forEach(m=>counts[m.name]=(counts[m.name]||0)+1);state.typing.forEach(t=>acts[t.name]=t.acts.length?t.acts[t.acts.length-1]:['✍️','drafting a reply']);
+  const falls={};state.messages.forEach(m=>{counts[m.name]=(counts[m.name]||0)+1;if(m.model==='Claude (relay fallback)')falls[m.name]=(falls[m.name]||0)+1});state.typing.forEach(t=>acts[t.name]=t.acts.length?t.acts[t.acts.length-1]:['✍️','drafting a reply']);
   document.getElementById('roster').innerHTML=state.personas.map(p=>`<div class="p${filter===p.name?' on':''}" data-n="${esc(p.name)}">
    <div class="av" style="background:${p.color}">${esc(p.initials)}<span class="st ${writing.has(p.name)?'w':(counts[p.name]?'d':'')}"></span></div>
    <div class="meta"><div class="nm">${esc(p.name)}${p.external?` <span class="chip ds" style="background:#fff">${esc(p.model)}</span>`:''}</div>
-   <div class="rl">${esc(p.role)}</div>${acts[p.name]?`<div class="act">${acts[p.name][0]} ${esc(acts[p.name][1])}</div>`:''}</div>
+   <div class="rl">${esc(p.role)}${p.external&&falls[p.name]?` · <span class="fb">${falls[p.name]} relay fallback${falls[p.name]>1?'s':''}</span>`:''}</div>${acts[p.name]?`<div class="act">${acts[p.name][0]} ${esc(acts[p.name][1])}</div>`:''}</div>
    <span class="ct">${counts[p.name]||0}</span></div>`).join('');
   document.querySelectorAll('.p').forEach(e=>e.onclick=()=>{filter=filter===e.dataset.n?null:e.dataset.n;
     document.querySelectorAll('.msg').forEach(m=>m.style.display=(!filter||m.dataset.who===filter)?'':'none');roster()})}
@@ -368,7 +379,9 @@ async function tick(){
     if(state.ui!==UI){location.reload();return}
     if(state.messages.length)document.getElementById('empty')?.remove();
     for(const m of state.messages)if(!seen.has(m.id)){seen.add(m.id);m._anim=primed;queue.push(m)}
-    roster();stages();stats();livebar();drain();primed=true}
+    roster();stages();stats();livebar();drain();primed=true;
+    if(state.done&&state.verdict&&!document.getElementById('verdictcard')){const v=document.createElement('div');v.id='verdictcard';v.className='verdict';
+      v.innerHTML='<div class="vh">📋 Verdict</div>'+safe(md(state.verdict));chat.appendChild(v);if(sticky)main.scrollTop=main.scrollHeight}}
   catch(e){document.getElementById('liveinner').innerHTML='<div class="typing">Viewer reconnecting…</div>'}}
 document.getElementById('jump').onclick=()=>{main.scrollTo({top:main.scrollHeight,behavior:'smooth'});unread=0;document.getElementById('jump').style.display='none'};
 tick();setInterval(tick,2000);

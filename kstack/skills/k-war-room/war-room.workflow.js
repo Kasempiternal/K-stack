@@ -1,6 +1,6 @@
 export const meta = {
   name: 'k-war-room',
-  description: 'War room: a moderated panel of mixed-model experts gives openings, chats live with @mentions, votes, and writes a transcript and verdict',
+  description: 'War room: a moderated panel of expert personas (Claude models, optional external seats) gives openings, chats live with @mentions, votes, and writes a transcript and verdict',
   whenToUse: 'Launched by the k-war-room skill with a panel spec in args; not for direct use',
   phases: [
     { title: 'Openings', detail: 'each panelist studies the brief and posts an opening' },
@@ -24,14 +24,17 @@ const SAFETY = A.readOnly === false
   ? 'You may read anything. Do not change state outside the files a task explicitly names.'
   : 'STRICTLY READ-ONLY: do not create, edit or delete files unless a task below explicitly names the file; no git commits, no submissions, no posting anywhere. Reading files, searching and read-only commands are fine.'
 
+const EXECUTORS = A.executors || 'the user and their agents'
 const BRIEF = `WAR ROOM: ${A.topic}
-Working directory: ${A.root}. Today is ${A.date}.
-
+Working directory: ${A.root}. Today is ${A.date}${A.now ? `; the time now is ${A.now}` : ''}.
+${A.briefFile ? `Read the full brief first: ${A.briefFile} (it has the facts, a glossary of artifact names and the file map).\n` : ''}
 ${A.brief || ''}
 
 You are on a moderated expert panel deciding this together, in a Slack-style channel. Panel: ${PANEL.map(p => `${p.name} (${p.role})`).join('; ')}. Moderator: ${MOD.name} (${MOD.role}).
 ${SAFETY}
-Be technically rigorous: cite numbers and the file or source you got them from. Disagree concretely and by name, and concede when convinced. Your final output IS your message (nothing else).`
+Be technically rigorous: cite numbers and the file or source you got them from. Use the glossary's names exactly; do not invent distinctions between artifacts. Disagree concretely and by name, and concede when convinced.
+You are an advisor on a simulated panel. You cannot run, build, measure or rent anything yourself, and you have no calendar. The work is done by ${EXECUTORS}. Every action you propose names its real owner from them, never yourself or another panelist.
+Your final output IS your message (nothing else).`
 
 function persona(p) {
   return `${BRIEF}
@@ -97,7 +100,7 @@ function chatRules(maxWords) {
   return `NOW: write your next message in the live channel. This is a fast group chat between experts, NOT an essay.
 - At most ${maxWords} words, 1-4 short lines. No headers, no sign-off, do not start with your own name.
 - React to the newest messages and tag who you answer with @Name, using first names: ${HANDLES}.
-- Push back with a specific number or source, concede, or propose a concrete action with an owner. Never repeat a point already made.
+- Push back with a specific number or source, concede, or propose a concrete action with a real owner (${EXECUTORS}). Never repeat a point already made.
 - If you want a specific person to answer next, end by tagging them.
 - At most 2 quick lookups, only to verify something you are about to cite.`
 }
@@ -171,7 +174,7 @@ if (F.votes) {
     const rules = `NOW: reply to the ballot in the channel, compactly (at most 120 words):
 - one line of votes, like "1A 2C 3B ...";
 - one line of reasoning on the vote you feel strongest about (tag anyone you disagree with);
-- "Action:" your single most important next action, with an exit criterion;
+- "Action:" your single most important next action, with its real owner and an exit criterion;
 - "Risk:" the biggest risk.`
     push(p.key, FIRST(p), await agent(relayWrap(p, withLog(persona(p), rules), 'vote'), opts(p, `${p.name} · vote`, 'Votes', p.relay ? undefined : 'medium')))
   }
@@ -179,23 +182,41 @@ if (F.votes) {
 
 // ---------------------------------------------------------------- verdict
 phase('Verdict')
-const verdict = await agent(withLog(modHead, `YOUR TASK: Close the war room and write exactly two files (you MAY create these two files, nothing else):
+const relayed = PANEL.filter(p => p.relay)
+const integrity = relayed.length
+  ? relayed.map(p => {
+      const mine = log_.filter(m => m.who === p.key)
+      const fb = mine.filter(m => m.text.startsWith('[relay:')).length
+      return `${p.name} (${p.badge || 'external'}): ${mine.length - fb} of ${mine.length} messages from the external model, ${fb} played by Claude`
+    }).join('; ')
+  : 'all seats are Claude models'
+const verdictTask = `YOUR TASK: Close the war room and write exactly two files (you MAY create these two files, nothing else):
 
 1. ${OUT}/transcript.md
    - The full channel above, verbatim, under a short header.
-   - The header gives the topic, the date (${A.date}), the panel (name, role, model; external-model seats played through a CLI relay unless a message says relay fallback) and the format.
+   - The header gives the topic, the date (${A.date}), the panel (name, role, model) and the format.
 
 2. ${OUT}/verdict.md
    - (a) A decision table: each ballot item, the tally per option, the winning option and the deciding argument.
    - (b) The recommended plan as a dated or ordered schedule.
-   - (c) A merged, de-duplicated action list, ordered, each item with an owner role and an exit criterion.
+   - (c) A merged, de-duplicated action list, ordered. Each item has an owner and an exit criterion. Owners are real executors (${EXECUTORS}), never a panelist: map each panelist's "I'll do X" to whoever would actually do X.
    - (d) Dissent worth keeping: minority positions with their strongest argument.
    - (e) Open questions that only evidence or measurement can settle, each mapped to how to settle it.
    - (f) The top risks with mitigations.
+   - (g) One "Panel integrity" line, verbatim: ${integrity}.
    - Be faithful to what panelists actually said. Do not invent votes.
 
-Your final output (your return value) is a closing message for the channel: at most 300 words, with the key decisions and tallies and the first 5 actions.`),
-  // verdictModel exists so a failed verdict can be retried on another model without invalidating the cached chat.
-  Object.assign(modOpts(`${MOD.name}: verdict`, 'Verdict', 'high'), A.verdictModel ? { model: A.verdictModel } : {}))
+Your final output (your return value) is a closing message for the channel: at most 300 words, with the key decisions and tallies and the first 5 actions with their owners.`
+const firstModel = A.verdictModel || MOD.model || null
+const attempts = [firstModel, ...(A.verdictFallbacks || [firstModel === 'sonnet' ? 'opus' : 'sonnet']).filter(m => m && m !== firstModel)]
+const usable = v => typeof v === 'string' && v.trim().length >= 200 && !/^(I can(no|')t|I'm unable|I am unable|Sorry)/i.test(v.trim())
+let verdict = null
+for (let i = 0; i < attempts.length; i++) {
+  const o = modOpts(`${MOD.name}: verdict`, 'Verdict', 'high')
+  if (attempts[i]) o.model = attempts[i]
+  verdict = await agent(withLog(modHead, verdictTask), o)
+  if (usable(verdict)) break
+  if (i + 1 < attempts.length) log(`verdict on ${attempts[i] || 'the session model'} failed or was refused; retrying on ${attempts[i + 1]}`)
+}
 
 return { verdict, messages: log_.length, outDir: OUT }

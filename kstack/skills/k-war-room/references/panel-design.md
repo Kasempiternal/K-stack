@@ -39,12 +39,14 @@ Give each seat 2-5 specific files or sections, so openings are grounded and cost
 
 ## Model mix
 
-**Respect the user's subagent ceiling first.** If `~/.claude/CLAUDE.md` has a K-stack routing block (written by `/kstack:k-setup`), seat models follow its roles:
+**Claude models only by default.** Every seat, the moderator and the verdict run on Claude (`haiku`, `sonnet`, `opus`). External models are an opt-in (`--models mix` or `--external`, below).
+
+**Respect the user's subagent ceiling first.** If `~/.claude/CLAUDE.md` has a K-stack routing block, seat models follow its roles:
 - deep technical seats and the red-teamer take the `design` or `review` tier;
 - the strategist takes the `docs` or `research` tier;
 - the moderator and the verdict take the `review` tier.
 
-Max effort, and any tier above the preset, only when one of these holds:
+Go above the preset (Opus, max effort) only when:
 - the user says "burn" or "max";
 - the invocation passes `--burn`;
 - the user's instructions or a project memory lift the ceiling.
@@ -60,32 +62,27 @@ Within the ceiling:
 | chat turns (all Claude seats) | `chatEffort: medium` keeps the chat fast |
 | cheap, broad seats (when budget matters) | `haiku`, effort `high` |
 
-### External models
+Mixing tiers is the diversity lever when all seats are Claude: different models and efforts reason differently. Give conflicting stances to seats on different tiers, so no single tier carries a side alone.
 
-External models are a viewpoint in themselves (a different training lineage), so use them on 1-2 seats where a different "school" is plausible. Keep them to at most ~⅓ of the panel: they are slower and less reliable.
+### External seats (opt-in)
 
-Command Code (`cmd`) relay. Use it only if the user has installed and approved it. It runs another model's agent with `--yolo`, so keep the prompt read-only:
+Use these only when the user asks (`--models mix`, `--external`, or "include a DeepSeek seat"). An external model is a viewpoint in itself (a different training lineage), so put one on 1-2 seats where a different "school" is plausible. Keep them to at most ~⅓ of the panel: they are slower and less reliable.
+
+Command Code (`cmd`) relay, if the user has it installed and approved:
 
 ```
 cd <root> && cmd -p "$(cat {PROMPT_FILE})" -m <model> --yolo --trust --skip-onboarding --max-turns {MAX_TURNS} 2>&1 | tail -c 8000
 ```
 
-Check `cmd status` and `cmd --list-models` first; model names change often. Example picks (October 2026), each a distinct family:
+Before using one:
+1. **Check access.** Run `cmd status`.
+2. **Pick the newest model.** Run `cmd --list-models` and take the newest flagship in each family: the highest version number, unless the user named a model. Model names change monthly, so never reuse a pick from memory. As of late October 2026: `deepseek/deepseek-v4.1-flash` (it replaced v4-pro and leads on coding/agentic), `moonshotai/kimi-k3.1-pro`, `zai-org/glm-5.3`, `qwen/qwen3.8-max`.
+3. **Preflight it.** SKILL.md step 6: a PONG test per relay, before launch.
 
-| model | good for |
-|---|---|
-| `deepseek/deepseek-v4.1-flash` | systems, efficiency, infra (newer than v4-pro; ahead on coding/agentic, slightly behind on GPQA) |
-| `moonshotai/kimi-k3` | long-context synthesis |
-| `zai-org/glm-5.3` | coding pragmatism |
-| `qwen/qwen3.8-max` | agentic and execution planning |
-| `minimaxai/minimax-m3` | product/multimodal |
-| `xiaomi/mimo-v2.6-pro` | |
-| `nvidia/nemotron-3-ultra-550b-a55b` | |
-
-Other CLIs (`codex exec`, `cursor-agent`, `grok`) work as relays too. Verify their non-interactive flags with `--help`, and keep them read-only.
+`{PROMPT_FILE}` and `{MAX_TURNS}` are filled in by the workflow. Openings get 40 agent turns, chat and votes 16, with one retry at double if the CLI runs out. Other CLIs (`codex exec`, `cursor-agent`, `grok`) work as relays too: verify their non-interactive flags with `--help` and keep them read-only.
 
 ## Cost and time (rough)
 
 - **Openings:** N agents in parallel, each reading its list (~50-150k tokens each; the largest cost).
-- **Chat:** turns run sequentially at ~20-60 s each (external seats ~60-120 s), and each turn re-reads the channel (small).
+- **Chat:** turns run sequentially at ~20-60 s each (external seats, if any, ~60-120 s), and each turn re-reads the channel (small).
 - **Total agent calls** ≈ N (openings) + turns + turns/7 + 1 (ballot) + N (votes) + 2. With 6 seats and 28 turns that is ~46 calls, ~30-45 minutes and ~2M subagent tokens.
