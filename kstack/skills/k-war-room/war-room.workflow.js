@@ -49,14 +49,16 @@ function withLog(head, task) {
 ${chatLog ? 'CHANNEL SO FAR (newest last):' + chatLog + '\n\n' : ''}${task}`
 }
 
+let relayN = 0
 function relayWrap(p, prompt, tag) {
   if (!p.relay) return prompt
-  const file = `/tmp/war-room-${SLUG}-${p.key}-${tag}.txt`
+  const dir = `${OUT}/.relay`
+  const file = `${dir}/${p.key}-${tag}-${++relayN}.txt`
   const cmd = p.relay.replace(/\{PROMPT_FILE\}/g, file).replace(/\{MAX_TURNS\}/g, String(tag === 'open' ? 40 : 8))
   return `You are a relay agent. The panelist "${p.name}" is played by a DIFFERENT model (${p.badge || 'external model'}) through its CLI. Get that model's message and return it.
 
 Steps:
-1. Write the persona prompt below, verbatim, to ${file} (use a quoted heredoc so nothing is expanded).
+1. Run: umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}'. Then write the persona prompt below, verbatim, to ${file} with set -o noclobber and a quoted heredoc, so nothing is expanded and no existing file or symlink is overwritten. If that write fails, go to step 4.
 2. Run this command with a Bash timeout of ${tag === 'open' ? 600000 : 300000} ms:
    ${cmd}
 3. Return ONLY that model's final message, verbatim. Strip CLI banners, tool logs and progress lines, but do not edit its words.

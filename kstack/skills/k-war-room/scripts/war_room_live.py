@@ -9,6 +9,7 @@ import html
 import json
 import os
 import re
+import secrets
 import socket
 import sys
 import time
@@ -20,6 +21,11 @@ JOURNAL = os.path.join(RUN_DIR, "journal.jsonl")
 # The page reloads itself when this changes, so UI edits reach an open tab.
 UI_VERSION = "w1"
 STAGES = [("Openings", "Openings"), ("Live chat", "Live chat"), ("Votes", "Votes"), ("Verdict", "Verdict")]
+def _color(value, default):
+    """Only #rgb / #rrggbb(aa) colours reach the page: panel.json is interpolated into HTML."""
+    return value if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{3,8}", value) else default
+
+
 PALETTE = ["#0f766e", "#b45309", "#be123c", "#1d4ed8", "#15803d", "#c2410c", "#0e7490", "#a16207", "#4d7c0f", "#0369a1", "#b91c1c", "#57534e"]
 LEADING_NAME = re.compile(r"^\s*\*\*[^*\n]{2,60}\*\*\s*\n+")
 ACTIVE_WINDOW_S = 420
@@ -33,11 +39,11 @@ def _initials(name):
 
 def _people():
     mod = dict(PANEL.get("moderator") or {"name": "Moderator", "role": "moderator"})
-    mod.update(mod=True, color=mod.get("color") or "#334155")
+    mod.update(mod=True, color=_color(mod.get("color"), "#334155"))
     out = [mod]
     for i, p in enumerate(PANEL.get("personas") or []):
         q = dict(p)
-        q.setdefault("color", PALETTE[i % len(PALETTE)])
+        q["color"] = _color(q.get("color"), PALETTE[i % len(PALETTE)])
         out.append(q)
     for q in out:
         q.setdefault("initials", _initials(q["name"]))
@@ -179,6 +185,7 @@ def _state():
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__TITLE__</title>
 <script src="__MARKED__" integrity="__SRI__" crossorigin="anonymous"></script>
+<script src="__PURIFY__" integrity="__PURIFY_SRI__" crossorigin="anonymous"></script>
 <style>
 :root{--bg:#eef3f2;--panel:#ffffff;--side:#0b3b38;--side-ink:#d6ece9;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
 --brand:#0f766e;--brand-soft:#e3f1ef;--code:#f6f8fa;--shadow:0 1px 2px rgba(15,23,42,.06),0 2px 8px rgba(15,23,42,.05)}
@@ -260,7 +267,7 @@ main{grid-area:main;overflow:auto;position:relative}
 <main id="main"><div id="chat"><div class="empty" id="empty">Waiting for the first message…</div></div>
 <div id="live"><div class="inner" id="liveinner"></div></div></main>
 <button id="jump">↓ New messages</button>
-<script>
+<script nonce="__NONCE__">
 const UI="__UI__";let state=null,filter=null,unread=0,primed=false,lastPhase="",lastSpeaker="",busy=false;
 const seen=new Set(),queue=[];
 const main=document.getElementById('main'),chat=document.getElementById('chat');
@@ -269,6 +276,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const nearBottom=()=>main.scrollTop+main.clientHeight>=main.scrollHeight-140;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function md(t){try{return marked.parse(t)}catch(e){return '<pre>'+esc(t)+'</pre>'}}
+const safe=h=>window.DOMPurify?DOMPurify.sanitize(h,{FORBID_TAGS:['style','form','input','button','iframe']}):'<pre>'+esc(h)+'</pre>';
 function closeOpen(t){if((t.match(/\*\*/g)||[]).length%2)t+='**';if((t.match(/`/g)||[]).length%2)t+='`';return t}
 function mentionize(html){
   if(!state)return html;
@@ -300,11 +308,11 @@ async function post(m,animate){
   const parts=chunks(m.text);
   for(let i=0;i<parts.length;i++){
     const first=i===0&&lastSpeaker!==m.name;const b=shell(m,first||i===0&&lastSpeaker!==m.name);lastSpeaker=m.name;
-    if(!animate){b.innerHTML=mentionize(md(parts[i]));continue}
+    if(!animate){b.innerHTML=safe(mentionize(md(parts[i])));continue}
     const words=parts[i].split(/(\s+)/);const step=Math.max(2,Math.ceil(words.length/45));
-    for(let w=0;w<words.length;w+=step){b.innerHTML=mentionize(md(closeOpen(words.slice(0,w+step).join(''))))+'<span class="caret"></span>';
+    for(let w=0;w<words.length;w+=step){b.innerHTML=safe(mentionize(md(closeOpen(words.slice(0,w+step).join('')))))+'<span class="caret"></span>';
       if(stick())main.scrollTop=main.scrollHeight;await sleep(28)}
-    b.innerHTML=mentionize(md(parts[i]));if(stick())main.scrollTop=main.scrollHeight;await sleep(350)}
+    b.innerHTML=safe(mentionize(md(parts[i])));if(stick())main.scrollTop=main.scrollHeight;await sleep(350)}
 }
 let sticky=true;const stick=()=>sticky;
 main.addEventListener('scroll',()=>{sticky=nearBottom();if(sticky){unread=0;document.getElementById('jump').style.display='none'}});
@@ -352,15 +360,25 @@ tick();setInterval(tick,2000);
 
 MARKED = "https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"
 MARKED_SRI = "sha384-H+hy9ULve6xfxRkWIh/YOtvDdpXgV2fmAGQkIDTxIgZwNoaoBal14Di2YTMR6MzR"
+PURIFY = "https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"
+PURIFY_SRI = "sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3"
+PORT = 0
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # Loopback only, and only under a loopback Host name: blocks DNS-rebinding reads of /data.
+        if self.headers.get("Host", "") not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}"):
+            self.send_error(403, "unexpected Host header")
+            return
         is_data = self.path.startswith("/data")
+        nonce = secrets.token_urlsafe(16)
         if is_data:
             body = json.dumps(_state()).encode()
         else:
-            body = (PAGE.replace("__MARKED__", MARKED).replace("__SRI__", MARKED_SRI).replace("__UI__", UI_VERSION)
+            body = (PAGE.replace("__MARKED__", MARKED).replace("__SRI__", MARKED_SRI)
+                    .replace("__PURIFY__", PURIFY).replace("__PURIFY_SRI__", PURIFY_SRI)
+                    .replace("__NONCE__", nonce).replace("__UI__", UI_VERSION)
                     .replace("__TITLE__", html.escape(PANEL.get("channel", "#war-room") + " · war room"))
                     .replace("__TOPIC__", html.escape(PANEL.get("title") or PANEL.get("topic", "War room")[:80]))
                     .replace("__CHANNEL__", html.escape(PANEL.get("channel", "#war-room")))
@@ -368,6 +386,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json" if is_data else "text/html; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if not is_data:
+            self.send_header("Content-Security-Policy",
+                             f"default-src 'none'; script-src 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+                             "style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+                             "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(body)
 
@@ -387,6 +411,6 @@ def _free_port(preferred):
 
 
 if __name__ == "__main__":
-    port = _free_port(int(sys.argv[3]) if len(sys.argv) > 3 else 8787)
-    print(f"WAR_ROOM_LIVE http://127.0.0.1:{port}", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    PORT = _free_port(int(sys.argv[3]) if len(sys.argv) > 3 else 8787)
+    print(f"WAR_ROOM_LIVE http://127.0.0.1:{PORT}", flush=True)
+    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
