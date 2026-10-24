@@ -74,7 +74,7 @@ Check `cmd status` and `cmd --list-models` first; model names change often. Exam
 
 | model | good for |
 |---|---|
-| `deepseek/deepseek-v4-pro` | systems, efficiency, infra |
+| `deepseek/deepseek-v4.1-flash` | systems, efficiency, infra (newer than v4-pro; ahead on coding/agentic, slightly behind on GPQA) |
 | `moonshotai/kimi-k3` | long-context synthesis |
 | `zai-org/glm-5.3` | coding pragmatism |
 | `qwen/qwen3.8-max` | agentic and execution planning |

@@ -20,8 +20,8 @@
       "read": "files/sections to read for the opening (absolute or root-relative)",
       "model": "sonnet", "effort": "high", "chatEffort": "medium" },
     { "key": "wei", "name": "Wei Zhang", "role": "…", "stance": "…", "read": "…",
-      "relay": "cd /abs/root && cmd -p \"$(cat {PROMPT_FILE})\" -m deepseek/deepseek-v4-pro --yolo --trust --skip-onboarding --max-turns {MAX_TURNS} 2>&1 | tail -c 8000",
-      "badge": "DeepSeek V4 Pro" }
+      "relay": "cd /abs/root && cmd -p \"$(cat {PROMPT_FILE})\" -m deepseek/deepseek-v4.1-flash --yolo --trust --skip-onboarding --max-turns {MAX_TURNS} 2>&1 | tail -c 8000",
+      "badge": "DeepSeek V4.1 Flash" }
   ]
 }
 ```
@@ -45,7 +45,7 @@
   "moderator": { "name": "Ada", "role": "Moderator · …", "model": "Claude Sonnet" },
   "personas": [
     { "name": "Mira Okafor", "role": "GPU architect · ex-NVIDIA", "model": "Claude Sonnet · high" },
-    { "name": "Wei Zhang", "role": "DeepSeek-style infra", "model": "DeepSeek V4 Pro", "external": true }
+    { "name": "Wei Zhang", "role": "DeepSeek-style infra", "model": "DeepSeek V4.1 Flash", "external": true }
   ]
 }
 ```
