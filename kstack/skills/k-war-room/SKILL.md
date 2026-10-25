@@ -84,21 +84,24 @@ What the viewer shows:
 **9. While it runs**, do not narrate every message. Answer the user's questions about progress from the viewer data: `curl -s http://127.0.0.1:<port>/data`.
 
 **10. When it completes:**
+- Write the transcript with the script, never with a model:
+  `python3 -I "${CLAUDE_SKILL_DIR}/scripts/write_transcript.py" <transcriptDir> <outDir>/panel.json`.
+  - Asking a model to copy the whole channel verbatim (tens of thousands of words of other models' analysis) trips Anthropic's "reasoning extraction" safeguard. The call is blocked on every model.
 - Read `outDir/verdict.md` and report the decisions with tallies, the first actions with their owners, and notable dissent.
 - If external seats were used, report how many of their messages were relay fallbacks (the verdict's "Panel integrity" line).
 - Offer to apply the verdict (e.g. update a plan file). Never apply it unasked.
-- The workflow retries a failed or refused verdict on another model by itself. If it still fails, resume with an explicit model:
+- **If the result has `verdictWritten: false`:** the workflow has already retried the verdict on each fallback model. Resume once with an explicit model:
 
 ```
 Workflow({ scriptPath, resumeFromRunId, args: <same args> + {"verdictModel": "<another model>"} })
 ```
 
-  Only the verdict re-runs; everything else is cached.
+  Only the verdict re-runs; everything else is cached. If that fails too, write verdict.md yourself from transcript.md: the ballot, the votes and the moderator's steers, in the same sections (a)-(g).
 - Leave the viewer running so the user can scroll back. Stop it (TaskStop) when the user is done or a new war room starts on the same port.
 
 ## Rules
 
-- **Read-only by default.** The workflow's prompts forbid edits, submissions and posting. The moderator writes transcript.md and verdict.md; relay agents write only their own prompt file. Keep it that way unless the user passes `--read-write`.
+- **Read-only by default.** The workflow's prompts forbid edits, submissions and posting. The moderator writes only verdict.md; transcript.md comes from `scripts/write_transcript.py`; relay agents write only their own prompt file. Keep it that way unless the user passes `--read-write`.
 - **Real owners only.** Panelists are advisors. Every action in the verdict names a real executor (the user, an agent role, a team), never a persona.
 - **Never fabricate a seat.** A failed external relay posts as "[relay: … played by Claude]", and the badge flips to "Claude (relay fallback)". Report how many messages were relays.
 - **Votes are advice, not authority.** Present the verdict, then let the user decide what to adopt. Outward-facing or irreversible actions proposed by the panel still need the user's go-ahead.
@@ -110,6 +113,7 @@ Workflow({ scriptPath, resumeFromRunId, args: <same args> + {"verdictModel": "<a
 ## Files
 
 - `war-room.workflow.js`: the generic workflow (openings → live @mention chat with a fairness cap → ballot and votes → verdict files, with a verdict retry on another model).
+- `scripts/write_transcript.py`: writes transcript.md from the workflow journal, with no model involved (step 10).
 - `scripts/war_room_live.py`: the live chat viewer (stdlib only; marked.js and DOMPurify from pinned CDN URLs with SRI, CSP, loopback-only).
 - `references/args-schema.md`: workflow args and panel.json formats.
 - `references/panel-design.md`: sizing, composition, stances, the model mix, optional external seats, cost.

@@ -1,12 +1,12 @@
 export const meta = {
-  name: 'k-war-room',
+  name: 'war-room',
   description: 'War room: a moderated panel of expert personas (Claude models, optional external seats) gives openings, chats live with @mentions, votes, and writes a transcript and verdict',
-  whenToUse: 'Launched by the k-war-room skill with a panel spec in args; not for direct use',
+  whenToUse: 'Launched by the war-room skill with a panel spec in args; not for direct use',
   phases: [
     { title: 'Openings', detail: 'each panelist studies the brief and posts an opening' },
     { title: 'Live chat', detail: 'one short message at a time; whoever is @mentioned speaks next' },
     { title: 'Votes', detail: 'moderator ballot, then each panelist votes' },
-    { title: 'Verdict', detail: 'moderator writes transcript.md and verdict.md' },
+    { title: 'Verdict', detail: 'moderator writes verdict.md (scripts/write_transcript.py writes transcript.md)' },
   ],
 }
 
@@ -190,13 +190,11 @@ const integrity = relayed.length
       return `${p.name} (${p.badge || 'external'}): ${mine.length - fb} of ${mine.length} messages from the external model, ${fb} played by Claude`
     }).join('; ')
   : 'all seats are Claude models'
-const verdictTask = `YOUR TASK: Close the war room and write exactly two files (you MAY create these two files, nothing else):
+// The transcript is written by scripts/write_transcript.py from the journal, never by a model:
+// asking a model to copy the whole channel verbatim trips the "reasoning extraction" safeguard.
+const verdictTask = `YOUR TASK: Close the war room and write exactly one file, ${OUT}/verdict.md (you MAY create this file, nothing else). A script writes transcript.md separately: do not write it, and do not reproduce the channel. Summarise in your own words, attribute positions by first name, and quote at most one short sentence at a time.
 
-1. ${OUT}/transcript.md
-   - The full channel above, verbatim, under a short header.
-   - The header gives the topic, the date (${A.date}), the panel (name, role, model) and the format.
-
-2. ${OUT}/verdict.md
+verdict.md (header: the topic, the date ${A.date}, the panel with roles):
    - (a) A decision table: each ballot item, the tally per option, the winning option and the deciding argument.
    - (b) The recommended plan as a dated or ordered schedule.
    - (c) A merged, de-duplicated action list, ordered. Each item has an owner and an exit criterion. Owners are real executors (${EXECUTORS}), never a panelist: map each panelist's "I'll do X" to whoever would actually do X.
@@ -206,17 +204,30 @@ const verdictTask = `YOUR TASK: Close the war room and write exactly two files (
    - (g) One "Panel integrity" line, verbatim: ${integrity}.
    - Be faithful to what panelists actually said. Do not invent votes.
 
-Your final output (your return value) is a closing message for the channel: at most 300 words, with the key decisions and tallies and the first 5 actions with their owners.`
+Return: verdictWritten = true only if the Write of verdict.md succeeded; closing = a closing message for the channel, at most 300 words, with the key decisions and tallies and the first 5 actions with their owners.`
+const VERDICT_SCHEMA = {
+  type: 'object',
+  properties: { verdictWritten: { type: 'boolean' }, closing: { type: 'string' } },
+  required: ['verdictWritten', 'closing'],
+}
 const firstModel = A.verdictModel || MOD.model || null
 const attempts = [firstModel, ...(A.verdictFallbacks || [firstModel === 'sonnet' ? 'opus' : 'sonnet']).filter(m => m && m !== firstModel)]
-const usable = v => typeof v === 'string' && v.trim().length >= 200 && !/^(I can(no|')t|I'm unable|I am unable|Sorry)/i.test(v.trim())
+// A blocked call returns null; a model that explains why it could not write returns verdictWritten false.
+const usable = v => !!v && v.verdictWritten === true && typeof v.closing === 'string' && v.closing.trim().length >= 200
 let verdict = null
 for (let i = 0; i < attempts.length; i++) {
   const o = modOpts(`${MOD.name}: verdict`, 'Verdict', 'high')
   if (attempts[i]) o.model = attempts[i]
+  o.schema = VERDICT_SCHEMA
   verdict = await agent(withLog(modHead, verdictTask), o)
   if (usable(verdict)) break
   if (i + 1 < attempts.length) log(`verdict on ${attempts[i] || 'the session model'} failed or was refused; retrying on ${attempts[i + 1]}`)
 }
 
-return { verdict, messages: log_.length, outDir: OUT }
+return {
+  verdict: verdict ? verdict.closing : null,
+  verdictWritten: usable(verdict),
+  messages: log_.length,
+  outDir: OUT,
+  next: 'Run scripts/write_transcript.py <transcriptDir> <outDir>/panel.json to write transcript.md. If verdictWritten is false, the main session writes verdict.md from transcript.md.',
+}
