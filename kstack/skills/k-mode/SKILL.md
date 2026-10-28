@@ -18,6 +18,7 @@ disable-model-invocation: true
 - **Match a playbook first.** Open its file. The first todo items are its steps, copied in verbatim, before any task-specific item. A step you skip stays in the list as `skip: <reason>`.
 - **Route by role.** Every delegated step names a role from `routing.md` and dispatches to that role's tier agent. Never choose a model ad hoc. Say `<role> → <tier>: <task>` in one line before each dispatch.
 - **Design before code.** Anything nontrivial or crossing a function boundary goes through **k-design** first. Name the data shape before logic.
+- **Price options in agent time.** An open-ended improve, optimize or redesign task, or an option about to be dropped as too big, goes through **k-agent-time** before choosing.
 - **Understand before changing.** An unfamiliar subsystem, an "are we sure?", or a regression question goes through **k-explore**.
 - **Review before landing.** Every worker diff gets **k-review** before commit. A trivial one-file change gets the lead's own read instead, stated as such.
 - **Prove it on the matching surface.** UI, native app, or device work is verified through **k-e2e-qa**. A CLI is verified by running it. A library is verified by calling it the way its users do. Bug fixes are reproduced on that surface before any fix.
