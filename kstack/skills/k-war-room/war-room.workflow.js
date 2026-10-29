@@ -1,0 +1,233 @@
+export const meta = {
+  name: 'war-room',
+  description: 'War room: a moderated panel of expert personas (Claude models, optional external seats) gives openings, chats live with @mentions, votes, and writes a transcript and verdict',
+  whenToUse: 'Launched by the war-room skill with a panel spec in args; not for direct use',
+  phases: [
+    { title: 'Openings', detail: 'each panelist studies the brief and posts an opening' },
+    { title: 'Live chat', detail: 'one short message at a time; whoever is @mentioned speaks next' },
+    { title: 'Votes', detail: 'moderator ballot, then each panelist votes' },
+    { title: 'Verdict', detail: 'moderator writes verdict.md (scripts/write_transcript.py writes transcript.md)' },
+  ],
+}
+
+// args: see references/args-schema.md beside this file
+const A = args || {}
+const PANEL = A.panel || []
+const MOD = A.moderator || { name: 'Ada', role: 'moderator', stance: 'fair, sharp and decision-oriented' }
+const F = Object.assign({ openings: true, openingWords: 350, turns: 20, steerEvery: 7, maxWords: 90, votes: true }, A.format || {})
+const SLUG = A.slug || 'war-room'
+const OUT = A.outDir
+const FIRST = p => p.name.split(' ')[0]
+const HANDLES = [...PANEL.map(p => '@' + FIRST(p)), '@' + FIRST(MOD)].join(' ')
+
+const SAFETY = A.readOnly === false
+  ? 'You may read anything. Do not change state outside the files a task explicitly names.'
+  : 'STRICTLY READ-ONLY: do not create, edit or delete files unless a task below explicitly names the file; no git commits, no submissions, no posting anywhere. Reading files, searching and read-only commands are fine.'
+
+const EXECUTORS = A.executors || 'the user and their agents'
+const BRIEF = `WAR ROOM: ${A.topic}
+Working directory: ${A.root}. Today is ${A.date}${A.now ? `; the time now is ${A.now}` : ''}.
+${A.briefFile ? `Read the full brief first: ${A.briefFile} (it has the facts, a glossary of artifact names and the file map).\n` : ''}
+${A.brief || ''}
+
+You are on a moderated expert panel deciding this together, in a Slack-style channel. Panel: ${PANEL.map(p => `${p.name} (${p.role})`).join('; ')}. Moderator: ${MOD.name} (${MOD.role}).
+${SAFETY}
+Be technically rigorous: cite numbers and the file or source you got them from. Use the glossary's names exactly; do not invent distinctions between artifacts. Disagree concretely and by name, and concede when convinced.
+You are an advisor on a simulated panel. You cannot run, build, measure or rent anything yourself, and you have no calendar. The work is done by ${EXECUTORS}. Every action you propose names its real owner from them, never yourself or another panelist.
+Your final output IS your message (nothing else).`
+
+function persona(p) {
+  return `${BRIEF}
+
+YOU ARE ${p.name}, ${p.role}.
+Your stance: ${p.stance}${p.read ? `\nRead for your expertise: ${p.read}` : ''}`
+}
+
+let chatLog = ''
+const log_ = []
+
+function withLog(head, task) {
+  return `${head}
+
+${chatLog ? 'CHANNEL SO FAR (newest last):' + chatLog + '\n\n' : ''}${task}`
+}
+
+function relayWrap(p, prompt, tag) {
+  if (!p.relay) return prompt
+  const dir = `${OUT}/.relay`
+  const turns = tag === 'open' ? 40 : 16
+  const cmd = p.relay.replace(/\{PROMPT_FILE\}/g, '"$F"').replace(/\{MAX_TURNS\}/g, String(turns))
+  const retry = p.relay.replace(/\{PROMPT_FILE\}/g, '"$F"').replace(/\{MAX_TURNS\}/g, String(turns * 2))
+  return `You are a relay agent. The panelist "${p.name}" is played by a DIFFERENT model (${p.badge || 'external model'}) through its CLI. Get that model's message and return it.
+
+Steps:
+1. Run in Bash: umask 077 && mkdir -p '${dir}' && chmod 700 '${dir}' && mktemp -d '${dir}/${p.key}-${tag}-XXXXXX'
+   It prints a new private directory, P below.
+2. With the Write tool (never the shell, never a heredoc), create P/prompt.txt holding the persona prompt below, verbatim.
+3. Run in Bash with a timeout of ${tag === 'open' ? 600000 : 420000} ms, writing P out in full:
+   F='P/prompt.txt' && ${cmd}
+   If the output ends with a "maximum conversation turns" warning and holds no final message, run once more:
+   F='P/prompt.txt' && ${retry}
+4. Return ONLY that model's final message, verbatim. Strip CLI banners, tool logs and progress lines, but do not edit its words.
+5. If the CLI still fails or returns nothing usable, write the message yourself in ${p.name}'s persona and begin it with "[relay: ${p.badge || 'external model'} unavailable, played by Claude]".
+
+Do not edit any other files.
+
+PERSONA PROMPT (verbatim):
+-----
+${prompt}
+-----`
+}
+
+function opts(p, label, phase, effortOverride) {
+  const o = { label, phase }
+  if (p.relay) { o.model = A.relayModel || 'sonnet'; o.effort = 'low'; return o }
+  if (p.model) o.model = p.model
+  const e = effortOverride || p.effort
+  if (e) o.effort = e
+  return o
+}
+
+function push(who, name, text) {
+  const t = String(text || '').trim()
+  if (!t) return null
+  log_.push({ who, text: t })
+  chatLog += `\n\n**${name}**: ${t}`
+  return log_[log_.length - 1]
+}
+
+function chatRules(maxWords) {
+  return `NOW: write your next message in the live channel. This is a fast group chat between experts, NOT an essay.
+- At most ${maxWords} words, 1-4 short lines. No headers, no sign-off, do not start with your own name.
+- React to the newest messages and tag who you answer with @Name, using first names: ${HANDLES}.
+- Push back with a specific number or source, concede, or propose a concrete action with a real owner (${EXECUTORS}). Never repeat a point already made.
+- If you want a specific person to answer next, end by tagging them.
+- At most 2 quick lookups, only to verify something you are about to cite.`
+}
+
+const spoken = {}
+
+// An @mention picks the next speaker unless that person is already 2+ messages ahead of the
+// quietest panelist; then the quietest (least recent on ties) speaks, so no pair monopolizes.
+function pickNext(last) {
+  const recent = log_.slice(-2).map(m => m.who)
+  const count = p => spoken[p.key] || 0
+  const cap = Math.min(...PANEL.map(count)) + 2
+  const tagged = PANEL
+    .map(p => ({ p, i: last.text.indexOf('@' + FIRST(p)) }))
+    .filter(x => x.i >= 0 && x.p.key !== last.who && count(x.p) < cap)
+    .sort((a, b) => a.i - b.i)
+  const fresh = tagged.find(x => !recent.includes(x.p.key)) || tagged[0]
+  if (fresh) return fresh.p
+  const lastIdx = p => { for (let i = log_.length - 1; i >= 0; i--) if (log_[i].who === p.key) return i; return -1 }
+  return PANEL.filter(p => p.key !== last.who).sort((a, b) => count(a) - count(b) || lastIdx(a) - lastIdx(b))[0]
+}
+
+// ---------------------------------------------------------------- openings
+if (F.openings) {
+  phase('Openings')
+  const task = `YOUR TASK: Opening statement, at most ${F.openingWords} words, plain Markdown:
+(1) your single most important insight on the topic, grounded in evidence;
+(2) what the team should actually do, concretely;
+(3) the thing others will get wrong, or the biggest risk.`
+  const msgs = await parallel(PANEL.map(p => () =>
+    agent(relayWrap(p, `${persona(p)}\n\n${task}`, 'open'), opts(p, `${p.name} · opening`, 'Openings'))))
+  msgs.forEach((m, i) => { if (!push(PANEL[i].key, FIRST(PANEL[i]), m)) log(`${PANEL[i].name}: no opening`) })
+}
+
+// ---------------------------------------------------------------- live chat
+phase('Live chat')
+const modHead = `${BRIEF}
+
+YOU ARE ${MOD.name}, the moderator: ${MOD.role}. ${MOD.stance || ''}`
+const modOpts = (label, phaseName, effort) => opts(MOD, label, phaseName, effort)
+
+let last = push('mod', FIRST(MOD), await agent(withLog(modHead, `YOUR TASK: Open the live chat in at most 110 words:
+- name the 2-3 sharpest disagreements or open questions${F.openings ? ' in the openings' : ''};
+- ask one pointed question, tagging the 2 panelists who must answer it first.
+Fast chat tone, no headers.`), modOpts(`${MOD.name}: kickoff`, 'Live chat', 'medium'))) || { who: 'mod', text: '' }
+
+for (let n = 1; n <= F.turns; n++) {
+  if (n > 1 && F.steerEvery && (n - 1) % F.steerEvery === 0) {
+    last = push('mod', FIRST(MOD), await agent(withLog(modHead, `YOUR TASK: Steer the chat in at most 90 words:
+- pin what is converging (1-2 bullets with names);
+- name the most important unresolved question;
+- tag the 2 people who must settle it next, preferring voices that have spoken least (${PANEL.map(p => `${FIRST(p)} ${spoken[p.key] || 0}`).join(', ')} messages so far).
+No headers.`), modOpts(`${MOD.name}: steer #${n}`, 'Live chat', 'medium'))) || last
+  }
+  const p = pickNext(last)
+  const msg = await agent(relayWrap(p, withLog(persona(p), chatRules(F.maxWords)), `c${n}`),
+    opts(p, `${p.name} · #${n}`, 'Live chat', p.relay ? undefined : (p.chatEffort || 'medium')))
+  const pushed = push(p.key, FIRST(p), msg)
+  if (pushed) { last = pushed; spoken[p.key] = (spoken[p.key] || 0) + 1 }
+  else log(`${p.name}: no message at turn ${n}`)
+}
+
+// ---------------------------------------------------------------- votes
+if (F.votes) {
+  phase('Votes')
+  push('mod', FIRST(MOD), await agent(withLog(modHead, `YOUR TASK: Close the debate and post the ballot.
+- Frame 4-8 numbered decisions, each with 2-4 concrete options (A/B/C...), covering what the channel showed is actually contested and decision-relevant.
+- Ask each panelist to reply with their votes, their top action and their biggest risk.
+- At most 230 words. No preamble.`), modOpts(`${MOD.name}: ballot`, 'Votes', 'high')))
+  for (const p of PANEL) {
+    const rules = `NOW: reply to the ballot in the channel, compactly (at most 120 words):
+- one line of votes, like "1A 2C 3B ...";
+- one line of reasoning on the vote you feel strongest about (tag anyone you disagree with);
+- "Action:" your single most important next action, with its real owner and an exit criterion;
+- "Risk:" the biggest risk.`
+    push(p.key, FIRST(p), await agent(relayWrap(p, withLog(persona(p), rules), 'vote'), opts(p, `${p.name} · vote`, 'Votes', p.relay ? undefined : 'medium')))
+  }
+}
+
+// ---------------------------------------------------------------- verdict
+phase('Verdict')
+const relayed = PANEL.filter(p => p.relay)
+const integrity = relayed.length
+  ? relayed.map(p => {
+      const mine = log_.filter(m => m.who === p.key)
+      const fb = mine.filter(m => m.text.startsWith('[relay:')).length
+      return `${p.name} (${p.badge || 'external'}): ${mine.length - fb} of ${mine.length} messages from the external model, ${fb} played by Claude`
+    }).join('; ')
+  : 'all seats are Claude models'
+// The transcript is written by scripts/write_transcript.py from the journal, never by a model:
+// asking a model to copy the whole channel verbatim trips the "reasoning extraction" safeguard.
+const verdictTask = `YOUR TASK: Close the war room and write exactly one file, ${OUT}/verdict.md (you MAY create this file, nothing else). A script writes transcript.md separately: do not write it, and do not reproduce the channel. Summarise in your own words, attribute positions by first name, and quote at most one short sentence at a time.
+
+verdict.md (header: the topic, the date ${A.date}, the panel with roles):
+   - (a) A decision table: each ballot item, the tally per option, the winning option and the deciding argument.
+   - (b) The recommended plan as a dated or ordered schedule.
+   - (c) A merged, de-duplicated action list, ordered. Each item has an owner and an exit criterion. Owners are real executors (${EXECUTORS}), never a panelist: map each panelist's "I'll do X" to whoever would actually do X.
+   - (d) Dissent worth keeping: minority positions with their strongest argument.
+   - (e) Open questions that only evidence or measurement can settle, each mapped to how to settle it.
+   - (f) The top risks with mitigations.
+   - (g) One "Panel integrity" line, verbatim: ${integrity}.
+   - Be faithful to what panelists actually said. Do not invent votes.
+
+Return: verdictWritten = true only if the Write of verdict.md succeeded; closing = a closing message for the channel, at most 300 words, with the key decisions and tallies and the first 5 actions with their owners.`
+const VERDICT_SCHEMA = {
+  type: 'object',
+  properties: { verdictWritten: { type: 'boolean' }, closing: { type: 'string' } },
+  required: ['verdictWritten', 'closing'],
+}
+const firstModel = A.verdictModel || MOD.model || null
+const attempts = [firstModel, ...(A.verdictFallbacks || [firstModel === 'sonnet' ? 'opus' : 'sonnet']).filter(m => m && m !== firstModel)]
+// A blocked call returns null; a model that explains why it could not write returns verdictWritten false.
+const usable = v => !!v && v.verdictWritten === true && typeof v.closing === 'string' && v.closing.trim().length >= 200
+let verdict = null
+for (let i = 0; i < attempts.length; i++) {
+  const o = modOpts(`${MOD.name}: verdict`, 'Verdict', 'high')
+  if (attempts[i]) o.model = attempts[i]
+  o.schema = VERDICT_SCHEMA
+  verdict = await agent(withLog(modHead, verdictTask), o)
+  if (usable(verdict)) break
+  if (i + 1 < attempts.length) log(`verdict on ${attempts[i] || 'the session model'} failed or was refused; retrying on ${attempts[i + 1]}`)
+}
+
+return {
+  verdict: verdict ? verdict.closing : null,
+  verdictWritten: usable(verdict),
+  messages: log_.length,
+  outDir: OUT,
+  next: 'Run scripts/write_transcript.py <transcriptDir> <outDir>/panel.json to write transcript.md. If verdictWritten is false, the main session writes verdict.md from transcript.md.',
+}

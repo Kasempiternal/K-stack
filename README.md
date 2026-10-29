@@ -38,6 +38,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 | `/kstack:k-review` | Diff review on separate Opus lenses, judged by the lead |
 | `/kstack:k-write` | Prose rules for docs, commits, PRs, and replies |
 | `/kstack:k-spectre` | Parallel web/codebase research with independent claim validation |
+| `/kstack:k-war-room` | A moderated expert panel (mixed Claude tiers, optional external models) that debates in a live chat you watch in the browser, votes, and writes a verdict |
 | `/kstack:k-e2e-qa` | UI and device verification: macOS, iOS, Android, web |
 | `/kstack:k-gpt-architect` | Optional: delegate to the Codex MCP to spend ChatGPT quota |
 | `/kstack:k-cursor-architect` | Optional: delegate to `cursor-agent` (Grok) to spend Cursor quota |

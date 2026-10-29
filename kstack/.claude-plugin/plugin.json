@@ -1,8 +1,8 @@
 {
   "name": "kstack",
   "displayName": "K-stack",
-  "version": "1.3.0",
-  "description": "k-mode router + playbooks, per-role Haiku/Sonnet/Opus effort tiers, k-effort level switch, k-tokens audit and token settings, k-spectre research, k-review, k-e2e-qa, and safety hooks.",
+  "version": "1.4.0",
+  "description": "k-mode router + playbooks, per-role Haiku/Sonnet/Opus effort tiers, k-effort level switch, k-tokens audit and token settings, k-spectre research, k-war-room expert panels, k-review, k-e2e-qa, and safety hooks.",
   "author": {
     "name": "Kasempiternal",
     "url": "https://github.com/Kasempiternal"
