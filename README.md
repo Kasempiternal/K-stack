@@ -35,6 +35,7 @@ K-stack is my personal Claude Code stack, and the next version of what used to b
 | `/kstack:k-tokens` | Audits local transcripts for token waste and applies a few cache, compaction, subagent-model and effort settings |
 | `/kstack:k-explore` | Read-only subsystem explanations and git-history archaeology |
 | `/kstack:k-design` | Design before code: data shape, interface, file plan, failure cases |
+| `/kstack:k-agent-time` | Prices options in agent time, not human-hours, before an open-ended improvement or before dismissing an option as too big |
 | `/kstack:k-review` | Diff review on separate Opus lenses, judged by the lead |
 | `/kstack:k-write` | Prose rules for docs, commits, PRs, and replies |
 | `/kstack:k-spectre` | Parallel web/codebase research with independent claim validation |
