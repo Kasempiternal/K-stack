@@ -31,6 +31,6 @@ From this turn on, dispatch every role to the tier in that table. It replaces th
 
 Reply in three lines or fewer: the level, whether it was saved or is session-only, and the table if the user did not see it already. When it was saved, add that other open sessions keep their old routing until they restart.
 
-On `burn: on`, also say that `build`, `build-hard`, `design`, `review` and `sweep` now run on Opus Max for the rest of the session, and that `/kstack:k-effort burn off` ends it.
+On `burn: on`, also say that `build`, `build-hard`, `design`, `review` and `sweep` now run on Opus Max for the rest of the session (a role already on a Fable tier, as in Quality, keeps it), and that `/kstack:k-effort burn off` ends it.
 
 This skill never changes the lead's own model or effort. That is `/model` and `/effort`.

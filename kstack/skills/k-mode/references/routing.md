@@ -19,8 +19,12 @@ The Agent tool's `model` parameter cannot carry effort, so each model/effort pai
 | Opus 5.5 High | `kstack:k-opus-high` |
 | Opus 5.5 XHigh | `kstack:k-opus-xhigh` |
 | Opus 5.5 Max | `kstack:k-opus-max` |
+| Fable 5.2 Medium | `kstack:k-fable-medium` |
+| Fable 5.2 High | `kstack:k-fable-high` |
 
-The agents use the `haiku`, `sonnet` and `opus` aliases, so they follow the newest model your account and Claude Code version can reach. Sonnet 5.5 needs Claude Code v2.1.284 or later; Haiku 5.5 needs v2.1.293 or later. Without them an alias resolves to an older model. The routing still applies, but the numbers below were measured on 5.5. `/kstack:k-setup` reports which model each alias resolves to.
+The agents use the `haiku`, `sonnet`, `opus` and `fable` aliases, so they follow the newest model your account and Claude Code version can reach. Sonnet 5.5 needs Claude Code v2.1.284 or later; Haiku 5.5 needs v2.1.293 or later. Without them an alias resolves to an older model. The routing still applies, but the numbers below were measured on 5.5. `/kstack:k-setup` reports which model each alias resolves to.
+
+Fable tiers appear only in the Quality column. Lean and Balanced never use them. If `fable` is unreachable (no account access, or a provider that does not serve it), k-setup writes Quality with `design` and `sweep` on `opus-xhigh`, the pre-1.5.0 mapping. There is no Fable XHigh or Max tier: past Fable High the next step is not another model, it is checking the premise.
 
 `haiku` resolves to Haiku 5.5 only on the Anthropic API. On Bedrock, Google Cloud, Foundry and Claude Platform on AWS it is still Haiku 4.5, which has no effort control and scores 17 on the Intelligence Index. When k-setup finds that, it writes `# haiku: off` into the routing block and every Haiku tier runs as `sonnet-low` instead.
 
@@ -28,7 +32,7 @@ There is no Sonnet Max tier. Sonnet 5.5 at Max effort is forbidden: never dispat
 
 There is no Haiku Max or Haiku Low tier. Max adds 2 Intelligence Index points over XHigh for 1.8x the tokens, and AA measured a 415s time to first token at Max (26s at High), which defeats the point of Haiku. Low saves under a cent per task over Medium and loses 5 points. Work that outgrows Haiku XHigh belongs on Sonnet.
 
-If a `kstack:k-*` type is missing from the session's agent list, call a general-purpose agent with `model: "haiku"`, `"sonnet"` or `"opus"` and say in the reply that effort was not applied.
+If a `kstack:k-*` type is missing from the session's agent list, call a general-purpose agent with `model: "haiku"`, `"sonnet"`, `"opus"` or `"fable"` and say in the reply that effort was not applied.
 
 ## Roles
 
@@ -41,9 +45,9 @@ If a `kstack:k-*` type is missing from the session's agent list, call a general-
 | `build-hard` | large multi-file features, complex UI and state, executing a refactor or migration, hard bugs, failing-test investigation | sonnet-high | **sonnet-xhigh** | sonnet-xhigh |
 | `explore` | understanding unfamiliar code, repo-wide search, regression archaeology | opus-medium | **opus-medium** | opus-high |
 | `research` | web and document research seats (k-spectre) | sonnet-medium | **sonnet-high** | sonnet-xhigh |
-| `design` | architecture, system and API design, implementation plans, repo restructuring, RFCs | opus-medium | **opus-high** | opus-xhigh |
+| `design` | architecture, system and API design, implementation plans, repo restructuring, RFCs | opus-medium | **opus-high** | fable-medium |
 | `review` | diff review, simplification, security review, claim validation | opus-medium | **opus-high** | opus-xhigh |
-| `sweep` | final pre-release sweep, cross-system or concurrency root cause that resisted `build-hard` | opus-high | **opus-xhigh** | opus-xhigh |
+| `sweep` | final pre-release sweep, cross-system or concurrency root cause that resisted `build-hard` | opus-high | **opus-xhigh** | fable-high |
 
 `scan` versus `explore`: `scan` answers "where is X, what does this log say, which of these match". `explore` answers "how does this work and why". A scan result that needs interpretation goes to the lead or to `explore`, not to a second scan.
 
@@ -83,6 +87,7 @@ First match wins:
 Burn is a deliberate "spend tokens, solve this" switch. It turns on only when the user says "burn", "burn mode", names a Max tier, or runs `/kstack:k-effort burn`. A spoken burn applies to the task at hand. `/kstack:k-effort burn` applies to the session until `/kstack:k-effort burn off` or another preset is chosen, and is never saved, the same way `/effort max` is session-only.
 
 - `build`, `build-hard`, `design`, `review`, `sweep` → `k-opus-max`. On the hardest code Opus leads even Sonnet at Max (FrontierCode 54.4 vs 46.2), and Sonnet Max is forbidden anyway.
+- A role already on a Fable tier (Quality `design` and `sweep`) keeps it. Fable 5.2 High scores about level with Opus 5.5 Max on FrontierCode 2.0 (45.3 vs 45.5) at roughly half the cost per task, so swapping it for Opus Max would spend more for nothing.
 - Other roles keep their mapping.
 - A request for "Sonnet Max" is Burn on `k-opus-max`. Say so in the reply.
 
@@ -94,15 +99,15 @@ Escalate one step within the role's column before switching roles. `build` that 
 
 ## Security fallback
 
-Anthropic safeguards most cybersecurity work on Opus 5.5 and serves those requests with Opus 4.8 instead. The agent type still says `opus`, so the fallback is silent. Any worker on a security lens (k-review Security and data, a security-flavored `sweep`) ends its report with `model: <exact model ID>`. If the ID is not Opus 5.5, the lead labels those findings `ran on <ID>` and weighs them as a weaker reviewer's. Whether Sonnet 5.5 carries the same safeguard is not documented, so security stays on the `review` tier until measured. Security work never goes to a Haiku tier.
+Opus 5.5, Sonnet 5.5 and Fable 5.2 all run safety classifiers, most often on cybersecurity and biology. In Claude Code a flagged request re-runs on an older model with only a transcript notice: Opus 5.5 cybersecurity work goes to Opus 4.8, and Fable 5.2 sends cybersecurity to Opus 4.8 and biology to Opus 5. The agent type still names the original alias, so the fallback is silent to the lead. Any worker on a security lens (k-review Security and data, a security-flavored `sweep`) ends its report with `model: <exact model ID>`. If the ID is not the tier's model, the lead labels those findings `ran on <ID>` and weighs them as a weaker reviewer's. A Fable `sweep` on security work buys nothing over Opus, since both fall back to Opus 4.8. Security work never goes to a Haiku tier.
 
 ## The lead
 
-The main session is the lead. It plans, briefs, reviews, and talks to the user. Recommended lead: Opus 5.5 at High (`/model opus`, effort high). The lead edits directly only when the change and its check fit in one or two turns. Lookups the lead would otherwise do by reading many files go to `scan`, so the lead's context stays for judgment. Everything else is briefed to a role.
+The main session is the lead. It plans, briefs, reviews, and talks to the user. Recommended lead: Opus 5.5 at High (`/model opus`, effort high). Anthropic's guidance starts Opus at Medium (the Claude Code default); High suits a lead that judges every worker's output. The lead edits directly only when the change and its check fit in one or two turns. Lookups the lead would otherwise do by reading many files go to `scan`, so the lead's context stays for judgment. Everything else is briefed to a role.
 
 ## Why this shape
 
-From Artificial Analysis (2026-09-29 for Sonnet and Opus, 2026-10-08 for Haiku) and Anthropic's Haiku 5.5, Sonnet 5.5 and Opus 5.5 launch pages. The numbers are quoted as reported, not re-measured here.
+From Artificial Analysis (2026-09-29 for Sonnet and Opus, 2026-10-08 for Haiku), Anthropic's Haiku 5.5, Sonnet 5.5 and Opus 5.5 launch pages, and "Which Claude model should you build with?" (claude.dev, 2026-11-09) for Fable 5.2. The numbers are quoted as reported, not re-measured here.
 
 - Sonnet 5.5 High → XHigh is the useful coding step: Coding Agent Index 55 → 63.
 - Sonnet leads agentic terminal work (Terminal-Bench 4.0: 70.6 vs Opus 66.4) and is close on CursorBench 4.0 (55.5 vs 57.8) at half the price ($2/$10 vs $4/$20 per MTok). Code volume stays on Sonnet.
@@ -114,3 +119,6 @@ From Artificial Analysis (2026-09-29 for Sonnet and Opus, 2026-10-08 for Haiku) 
 - Haiku is far behind on agentic coding (Terminal-Bench 4.0: 39.2 vs Sonnet 70.6, AA measured 33), closer on single-shot hard code (FrontierCode 46.4 vs Sonnet XHigh 52.1), and 220 Elo behind on knowledge work (GDPval-AA 1620 vs 1840). Anthropic positions it for lookups, summaries, classification and subagent work under a Sonnet or Opus lead. So Haiku takes `scan` and `mechanical`, `docs` only in Lean, and never `build` or anything that ships claims.
 - AA measured a 40% hallucination rate for Haiku 5.5 on AA-Omniscience. `research` seats stay on Sonnet even in Lean, because a researcher's misses are invisible to the claim validators that catch its errors.
 - No benchmark covers visual taste. The UI mapping follows coding-agent results, not aesthetics.
+- Fable 5.2 costs $8/$40 per MTok, twice Opus 5.5, with cache reads at the same $0.20, so on cache-heavy runs the gap is only uncached input and output. Anthropic places it on major refactors, migrations, architecture planning, leading many subagents, and work where Opus 5.5 at High still falls short, starting at Medium.
+- Past High, one more effort level can cost as much as the next model up. Opus 5.5 XHigh adds about 1.4 SWE-bench Pro points for 2.5x the cost of High, while Fable 5.2 High matches Opus 5.5 Max on FrontierCode 2.0 at about half the cost. So Quality replaces Opus XHigh with Fable on `design` (Medium) and `sweep` (High), the two roles the blog's Fable rows describe. `review` stays on Opus: the blog gives Fable no review row, and review volume would double its price.
+- Balanced keeps Opus for `design` and `sweep`. Fable there would double the per-token cost of every design and sweep for gains the blog reserves for the hardest projects.

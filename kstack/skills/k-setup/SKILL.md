@@ -10,9 +10,9 @@ Write the `kstack-routing` block in `~/.claude/CLAUDE.md`. `k-mode` and every `k
 
 ## 1. Check the tier agents
 
-List the agent types available in this session. Confirm all eleven `kstack:k-*` tiers from `../k-mode/references/routing.md` are present. If any are missing, stop. Tell the user to run `/plugin update kstack` (or `/plugin install kstack@k-stack`) and start a new session. There is no Sonnet Max tier; it is forbidden. If a stale `kstack:k-sonnet-max` still appears, tell the user to run `/plugin update kstack` and never dispatch it.
+List the agent types available in this session. Confirm all thirteen `kstack:k-*` tiers from `../k-mode/references/routing.md` are present. If any are missing, stop. Tell the user to run `/plugin update kstack` (or `/plugin install kstack@k-stack`) and start a new session. There is no Sonnet Max tier; it is forbidden. If a stale `kstack:k-sonnet-max` still appears, tell the user to run `/plugin update kstack` and never dispatch it.
 
-Then check what the aliases resolve to. Dispatch `kstack:k-haiku-medium`, `kstack:k-sonnet-low` and `kstack:k-opus-medium` in one message, each with the prompt `Reply with only your exact model ID.` Report all three. If Sonnet is not 5.5, say that the routing still works but its benchmark basis was Sonnet 5.5, and that `claude update` plus account access moves it there automatically. If Haiku is not 5.5 (Bedrock, Google Cloud and Foundry still serve Haiku 4.5, which has no effort control), say so and plan to write the block with `--haiku off`, so every Haiku role runs as `sonnet-low`.
+Then check what the aliases resolve to. Dispatch `kstack:k-haiku-medium`, `kstack:k-sonnet-low`, `kstack:k-opus-medium` and `kstack:k-fable-medium` in one message, each with the prompt `Reply with only your exact model ID.` Report all four. If Sonnet is not 5.5, say that the routing still works but its benchmark basis was Sonnet 5.5, and that `claude update` plus account access moves it there automatically. If Haiku is not 5.5 (Bedrock, Google Cloud and Foundry still serve Haiku 4.5, which has no effort control), say so and plan to write the block with `--haiku off`, so every Haiku role runs as `sonnet-low`. If the Fable dispatch fails or returns a non-Fable ID, Fable is unreachable: when the user picks Quality, write it with `set quality design=opus-xhigh sweep=opus-xhigh` (the script records it as custom).
 
 ## 2. Load current state
 
@@ -26,10 +26,10 @@ Ask with AskUserQuestion. Name the current preset when one is recorded.
 
 - `Balanced (recommended)`: Haiku for lookups and mechanical edits, Sonnet High for everyday code, Sonnet XHigh for hard code, Opus Medium for exploration, Opus High for design and review, Opus XHigh for sweeps.
 - `Lean`: every role one effort step lower, and docs move to Haiku.
-- `Quality`: every role one step higher, capped at XHigh. Mechanical edits move back to Sonnet.
+- `Quality`: every role one step higher, capped at XHigh. Mechanical edits move back to Sonnet, and design and sweep move up to Fable 5.2 (Medium and High).
 - `Custom`: start from Balanced and change individual roles.
 
-Build the table from the matching column in `routing.md`. For Custom, show every role with its tier. Offer the ten non-Max tiers and `inherit` (the role runs on the lead's model, and `model` is omitted on the Agent call). Max tiers are never offered, since Burn reaches them per task.
+Build the table from the matching column in `routing.md`. For Custom, show every role with its tier. Offer the twelve non-Max tiers and `inherit` (the role runs on the lead's model, and `model` is omitted on the Agent call). Max tiers are never offered, since Burn reaches them per task.
 
 ## 4. Confirm
 

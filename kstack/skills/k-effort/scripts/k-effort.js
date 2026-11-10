@@ -198,10 +198,11 @@ function step(current, direction, presets) {
   return { preset: LADDER[j], roles: { ...presets[LADDER[j]] } };
 }
 
+// Burn lifts its roles to Opus Max, except roles already on Fable: Fable High matches Opus Max at about half the cost.
 function effectiveRoles(state) {
   const roles = applyHaiku(state.roles, state.haiku);
   if (!state.burn) return roles;
-  return Object.fromEntries(Object.entries(roles).map(([r, t]) => [r, BURN_ROLES.includes(r) ? 'opus-max' : t]));
+  return Object.fromEntries(Object.entries(roles).map(([r, t]) => [r, BURN_ROLES.includes(r) && !t.startsWith('fable-') ? 'opus-max' : t]));
 }
 
 function describe(state, headline) {
