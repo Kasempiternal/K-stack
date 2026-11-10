@@ -25,15 +25,16 @@ const PRICE = {
   'opus-5-5': [4, 20, 0.2, 5, 8],
   'opus-5': [5, 25, 0.5, 6.25, 10],
   'opus-4': [5, 25, 0.5, 6.25, 10],
-  'sonnet-5-5': [2, 10, 0.2, 2.5, 4],
+  'sonnet-5-5': [2, 10, 0.1, 2.5, 4],
   'sonnet-5': [2, 10, 0.2, 2.5, 4],
   'sonnet-4': [3, 15, 0.3, 3.75, 6],
   'haiku-5-5': [0.1, 0.5, 0.01, 0.125, 0.2],
   'haiku-4': [1, 5, 0.1, 1.25, 2],
+  'fable-5-2': [8, 40, 0.2, 10, 16], // writes derived as 1.25x / 2x input; not listed in the source
   fable: [10, 50, 0.25, 12.5, 20],
 };
 // Used when the exact version is not in the table: the newest known price of the family.
-const FAMILY_FALLBACK = { opus: 'opus-5-5', sonnet: 'sonnet-5-5', haiku: 'haiku-5-5', fable: 'fable' };
+const FAMILY_FALLBACK = { opus: 'opus-5-5', sonnet: 'sonnet-5-5', haiku: 'haiku-5-5', fable: 'fable-5-2' };
 
 const CACHE_TTL_SHORT_S = 5 * 60;
 const CACHE_TTL_LONG_S = 60 * 60;

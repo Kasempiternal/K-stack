@@ -18,6 +18,7 @@ Default chat turns ≈ 4 × panelists, clamped to 12..36. The moderator steers e
 3. **One pragmatist or strategist** who owns deadlines, budget, scoring or business impact.
 4. A **user/customer advocate** when the outcome ships to people.
 5. Never two seats with the same lens. Merge them, or give one a sharply different stance.
+6. **Seats do their field's work, not its voice.** Brief a seat to run its discipline's method on the material (the short seller builds the short thesis from the filings, the forensic accountant traces the numbers), and to cite what it found. A seat that only talks in character adds tone, not evidence.
 
 ## Stances create the debate
 
@@ -29,7 +30,7 @@ Without opposing stances the panel agrees in round one and adds nothing.
 
 ## Reading lists
 
-Give each seat 2-5 specific files or sections, so openings are grounded and costs stay bounded. Shared context goes in the brief; expertise-specific depth goes in `read`.
+Give each seat 2-5 specific files or sections, so openings are grounded and costs stay bounded. Prefer the rawest source a seat's field would use (logs, data, filings) over someone's summary of it. Shared context goes in the brief; expertise-specific depth goes in `read`.
 
 ## Names
 

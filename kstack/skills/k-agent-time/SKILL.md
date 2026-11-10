@@ -1,6 +1,6 @@
 ---
 name: k-agent-time
-description: Use when asked to improve, optimize, redesign or solve an open-ended technical problem, or before dismissing an option as too big, slow or costly. Prices effort for agents, not human-hours.
+description: Use when asked to improve, optimize, redesign or solve an open-ended technical problem, before dismissing an option as too big, slow or costly, or when the user asks to aim higher. Raises the ask (outcome, depth, range), then prices effort for agents, not human-hours.
 ---
 
 # Agent time
@@ -27,6 +27,22 @@ Still expensive, so price these honestly:
 - **Compute cost.** Tokens and hardware, in money. Usually small next to salaries, never zero.
 - **Blast radius.** How reversible the change is, and what breaks if it is wrong.
 - **Coherence.** Whether the work splits into parallel streams behind stable interfaces.
+
+## Raise the ask
+
+The request as written is usually the smallest version of what the user wants. Before generating options, check it on three axes. Adapted from Felix Rieseberg, "How to be more ambitious" (2026).
+
+- **Altitude: the outcome above the task.** Ask what the user wants to be true after this, and one level beyond. "Fix this crash" sits under "keep the app crash-free". Name the durable version: the workflow that would make the next instance need no human. If the agent lacks access it would need (crash reports, a device, a dashboard, a connector), name that access as the first task rather than shrinking the goal. Altitude suits outcome-driven work. Leave a creative or taste request at the level it was asked.
+- **Depth: work the way the best in the field do.** Answer these four questions, then rewrite the brief to ask for exactly that:
+  1. What would a top practitioner do here that the request did not ask for?
+  2. What is the rawest material they would start from? Logs over summaries, the database over the dashboard, the full history over a sample.
+  3. Which methods and instruments would they use? A database, a profiler, a statistical model or a simulation, not a markdown table.
+  4. What other than the model would judge the result? A test, a benchmark, held-out data, a tool the agent can run. A model grading its own work is not a judge.
+- **Range: bring in other fields.** Restate the work as a verb phrase. "Write the quarterly review" becomes "get busy people to believe a cause-and-effect story and decide in 30 minutes", which shows which fields apply. For each relevant field, plus a red team (short seller, forensic accountant, attacker), brief a worker to do that field's work: run its analysis, use its tools, return its findings. Do not ask a worker to sound like the field. A "short seller" seat researches the short thesis; it does not write in a short seller's voice.
+
+**Set the target from what is possible, not what is comfortable.** Specific, hard goals beat "do your best". Prefer "200 ms" to "faster", and state in the brief that the target is reachable and to keep going. Ambition sets the target, not the claim: the result is still reported against the outside judge, measured.
+
+The raised ask is a proposal. Show it in one or two lines next to the literal request, take the literal request's cheap wins first, and escalate scope only with a yes (see Running a big build).
 
 ## Procedure
 
@@ -85,4 +101,8 @@ Then rank everything by expected value, cheap wins first.
 - Timelines in weeks or months
 - "Rewriting from scratch is risky" as a reflex rather than a priced risk
 - Only Tune and Swap options for an open-ended improvement request
+- Solving the literal task when a higher outcome was in reach and nobody named it
+- A brief that hands a worker a summary when the raw data was available
+- A worker asked to role-play a field instead of doing its work
+- The model judging its own output with no outside check
 - The opposite failure: an ambitious plan with no oracle, or "done" without measurements
